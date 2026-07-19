@@ -2,6 +2,8 @@ from rest_framework import serializers
 from servers.models import Server
 
 class ServerSerializer(serializers.ModelSerializer):
+    owner_email = serializers.ReadOnlyField(source='owner.email')
+
     class Meta:
         model = Server
         fields = (
@@ -15,14 +17,19 @@ class ServerSerializer(serializers.ModelSerializer):
             'last_seen',
             'created_at',
             'updated_at',
+            'owner_email',
+            'department',
+            'location',
+            'organization',
         )
         read_only_fields = (
             'id',
-            'status', # The user shouldn't change this directly; status will update when agents contact
+            'status',
             'api_key',
             'last_seen',
             'created_at',
             'updated_at',
+            'owner_email',
         )
 
     def validate_name(self, value):

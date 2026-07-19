@@ -5,13 +5,18 @@ from servers.serializers import ServerSerializer
 from servers.permissions import IsOwner
 
 class ServerViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated, IsOwner]
+    permission_classes = [IsAuthenticated]
     serializer_class = ServerSerializer
 
     def get_queryset(self):
-        # Enforce that users can only view their own servers
-        return Server.objects.filter(owner=self.request.user).order_by('-created_at')
+        user = self.request.user
+        if user.role in ['ORGANIZATION_ADMIN', 'MEMBER'] and user.organization:
+            return Server.objects.filter(organization=user.organization).order_by('-created_at')
+        return Server.objects.filter(owner=user).order_by('-created_at')
 
     def perform_create(self, serializer):
-        # Automatically assign the request user as owner when registering a new server node
-        serializer.save(owner=self.request.user)
+        user = self.request.user
+        if user.role in ['ORGANIZATION_ADMIN', 'MEMBER'] and user.organization:
+            serializer.save(owner=user, organization=user.organization)
+        else:
+            serializer.save(owner=user)

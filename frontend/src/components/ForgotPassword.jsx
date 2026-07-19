@@ -9,9 +9,22 @@ export default function ForgotPassword({ onNavigate }) {
   const [submitted, setSubmitted] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
 
-  const handleSubmit = (e) => {
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
+    setError('');
+    setSubmitting(true);
+    try {
+      const { recoverPassword } = await import('../api/auth');
+      await recoverPassword(email.trim());
+      setSubmitted(true);
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || 'Failed to dispatch recovery link.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -38,6 +51,12 @@ export default function ForgotPassword({ onNavigate }) {
             Restore NodeBeacon connectivity
           </p>
         </div>
+
+        {error && (
+          <div className="p-3 bg-danger/5 border border-danger/20 text-danger rounded-xl text-xs font-mono">
+            {error}
+          </div>
+        )}
 
         {submitted ? (
           <div className="space-y-6 text-center">

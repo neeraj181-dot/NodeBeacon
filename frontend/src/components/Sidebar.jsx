@@ -13,6 +13,7 @@ import {
   Wifi,
   Database
 } from 'lucide-react';
+import { Users } from 'lucide-react';
 import Logo from './Logo';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
@@ -20,7 +21,7 @@ import { motion } from 'framer-motion';
 export default function Sidebar({ currentTab, setCurrentTab }) {
   const { user, logout } = useAuth();
   
-  const menuItems = [
+  const baseItems = [
     { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard },
     { id: 'servers', name: 'Servers', icon: Server },
     { id: 'metrics', name: 'Metrics', icon: Activity },
@@ -28,8 +29,14 @@ export default function Sidebar({ currentTab, setCurrentTab }) {
     { id: 'logs', name: 'Logs', icon: Terminal },
     { id: 'reports', name: 'Reports', icon: FileText },
     { id: 'integrations', name: 'Integrations', icon: Blocks },
-    { id: 'settings', name: 'Settings', icon: Settings },
   ];
+
+  if (user?.role === 'ORGANIZATION_ADMIN' || user?.role === 'MEMBER') {
+    baseItems.push({ id: 'members', name: 'Team Members', icon: Users });
+  }
+
+  baseItems.push({ id: 'settings', name: 'Settings', icon: Settings });
+  const menuItems = baseItems;
 
   return (
     <aside className="w-[280px] h-screen bg-[#101010] border-r border-white/5 flex flex-col justify-between shrink-0 select-none p-6 pb-4 z-10">

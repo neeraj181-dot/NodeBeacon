@@ -19,7 +19,11 @@ class AlertViewSet(viewsets.ReadOnlyModelViewSet):
         check_and_trigger_offline_servers()
 
         # 2. Return alerts belonging only to the user's servers
-        queryset = Alert.objects.filter(server__owner=self.request.user).order_by('-created_at')
+        user = self.request.user
+        if user.role in ['ORGANIZATION_ADMIN', 'MEMBER'] and user.organization:
+            queryset = Alert.objects.filter(server__organization=user.organization).order_by('-created_at')
+        else:
+            queryset = Alert.objects.filter(server__owner=user).order_by('-created_at')
 
         # 3. Dynamic Query Parameter Filtering
         status_param = self.request.query_params.get('status')

@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Search, Bell, Plus, Terminal, User, Laptop } from 'lucide-react';
 import Logo from './Logo';
 import { useAlerts } from '../contexts/AlertContext';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Navbar({ onAddServerClick }) {
+  const { user } = useAuth();
   const [searchFocused, setSearchFocused] = useState(false);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const { alerts } = useAlerts();
@@ -33,9 +35,16 @@ export default function Navbar({ onAddServerClick }) {
         {/* Compact logo layout */}
         <div className="flex items-center gap-3">
           <Logo size={28} showGlow={true} />
-          <span className="font-bold text-white tracking-[0.5px] text-[16px] font-sans">
-            Node<span className="text-accent">Beacon</span>
-          </span>
+          <div>
+            <span className="font-bold text-white tracking-[0.5px] text-[16px] font-sans block leading-none">
+              Node<span className="text-accent">Beacon</span>
+            </span>
+            <span className="text-[9px] font-mono text-secondaryText uppercase tracking-wider block mt-1">
+              {user?.organization_details?.organization_name 
+                ? `${user.organization_details.organization_name} Workspace` 
+                : 'Personal Workspace'}
+            </span>
+          </div>
         </div>
 
         <div className={`relative flex items-center w-full transition-all duration-300 ${searchFocused ? 'max-w-md' : 'max-w-xs'}`}>
@@ -52,6 +61,17 @@ export default function Navbar({ onAddServerClick }) {
 
       {/* Right Side Actions */}
       <div className="flex items-center gap-4">
+        {/* Account Badge */}
+        {user?.role === 'ORGANIZATION_ADMIN' || user?.role === 'MEMBER' ? (
+          <span className="px-2.5 py-1 bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[9px] font-bold font-mono uppercase tracking-wider rounded-lg shadow-[0_0_10px_rgba(139,92,246,0.05)]">
+            Organization ({user.member_role || 'Member'})
+          </span>
+        ) : (
+          <span className="px-2.5 py-1 bg-accent/10 border border-accent/20 text-accent text-[9px] font-bold font-mono uppercase tracking-wider rounded-lg shadow-[0_0_10px_rgba(87,227,137,0.05)]">
+            Individual
+          </span>
+        )}
+
         {/* Platform Status */}
         {activeAlertsCount > 0 ? (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-danger/5 border border-danger/20 shadow-[0_0_10px_rgba(255,95,87,0.05)]">

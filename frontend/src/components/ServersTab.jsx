@@ -1,11 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useServers } from '../contexts/ServerContext';
-import { Server, Plus, Edit2, Trash2, Eye, Terminal, X, Copy, Check, Download, HelpCircle } from 'lucide-react';
+import { Server, Plus, Download, HelpCircle, X, Copy, Check, Terminal } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import ServerCard from './ServerCard';
+import { getMetrics } from '../api/metrics';
 
 
 export default function ServersTab({ onViewServer }) {
   const { servers, loading, error, addServer, editServer, removeServer } = useServers();
+
+  const [latestMetrics, setLatestMetrics] = useState({});
+
+  // Fetch latest metrics for all servers and map by server ID
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        const data = await getMetrics();
+        const map = {};
+        data.forEach((m) => {
+          if (!map[m.server]) {
+            map[m.server] = m;
+          }
+        });
+        setLatestMetrics(map);
+      } catch (err) {
+        console.error('Failed to fetch metrics for server cards', err);
+      }
+    };
+    fetchMetrics();
+    const interval = setInterval(fetchMetrics, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
   
   // Search & Filters state
   const [searchQuery, setSearchQuery] = useState('');
@@ -22,6 +48,8 @@ export default function ServersTab({ onViewServer }) {
   const [hostname, setHostname] = useState('');
   const [os, setOs] = useState('Ubuntu 24.04');
   const [ipAddress, setIpAddress] = useState('');
+  const [department, setDepartment] = useState('');
+  const [location, setLocation] = useState('');
   const [selectedServer, setSelectedServer] = useState(null);
   const [generatedKey, setGeneratedKey] = useState('');
   const [copied, setCopied] = useState(false);
@@ -59,7 +87,9 @@ export default function ServersTab({ onViewServer }) {
         name,
         hostname,
         operating_system: os,
-        ip_address: ipAddress
+        ip_address: ipAddress,
+        department: department || null,
+        location: location || null,
       });
       setGeneratedKey(result.api_key);
       // Don't close modal yet so the user can copy the API Key!
@@ -76,7 +106,9 @@ export default function ServersTab({ onViewServer }) {
         name,
         hostname,
         operating_system: os,
-        ip_address: ipAddress
+        ip_address: ipAddress,
+        department: department || null,
+        location: location || null,
       });
       setIsEditModalOpen(false);
       resetForm();
@@ -106,6 +138,8 @@ export default function ServersTab({ onViewServer }) {
     setHostname(server.hostname);
     setOs(server.operating_system);
     setIpAddress(server.ip_address);
+    setDepartment(server.department || '');
+    setLocation(server.location || '');
     setFormError('');
     setIsEditModalOpen(true);
   };
@@ -120,6 +154,8 @@ export default function ServersTab({ onViewServer }) {
     setHostname('');
     setOs('Ubuntu 24.04');
     setIpAddress('');
+    setDepartment('');
+    setLocation('');
     setSelectedServer(null);
     setGeneratedKey('');
     setCopied(false);
@@ -190,87 +226,14 @@ export default function ServersTab({ onViewServer }) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <AnimatePresence mode="popLayout">
           {filteredServers.map((server) => (
-            <motion.div
-              layout
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.2 }}
+            <ServerCard
               key={server.id}
-              className="bg-card border border-white/5 p-6 rounded-2xl hover:border-white/10 transition-all duration-300 relative overflow-hidden flex flex-col justify-between h-[210px] group shadow-lg"
-            >
-              {/* Status Indicator */}
-              <div className="absolute top-0 right-0 w-24 h-24 pointer-events-none">
-                <div className={`absolute top-4 right-4 w-2 h-2 rounded-full ${
-                  server.status === 'Online' ? 'bg-accent animate-pulse' : 'bg-danger'
-                }`} />
-              </div>
-
-              {/* Server Metadata */}
-              <div>
-                <div className="flex items-center gap-2.5">
-                  <div className="p-1.5 bg-hover rounded border border-white/5">
-                    <Server className="w-4 h-4 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-white font-mono truncate max-w-[170px] uppercase">
-                      {server.name}
-                    </h3>
-                    <span className="text-[10px] text-secondaryText block truncate max-w-[170px] font-mono">
-                      {server.hostname}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="mt-4 grid grid-cols-2 gap-y-2 gap-x-4 border-t border-white/5 pt-3">
-                  <div>
-                    <span className="text-[9px] text-secondaryText uppercase tracking-wider font-semibold block">OS</span>
-                    <span className="text-xs font-medium text-white truncate block">{server.operating_system}</span>
-                  </div>
-                  <div>
-                    <span className="text-[9px] text-secondaryText uppercase tracking-wider font-semibold block">IP Address</span>
-                    <span className="text-xs font-mono text-white truncate block">{server.ip_address}</span>
-                  </div>
-                  <div>
-                    <span className="text-[9px] text-secondaryText uppercase tracking-wider font-semibold block">Status</span>
-                    <span className={`text-[10px] font-bold uppercase ${
-                      server.status === 'Online' ? 'text-accent' : 'text-danger'
-                    }`}>
-                      {server.status}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[9px] text-secondaryText uppercase tracking-wider font-semibold block">Last Heartbeat</span>
-                    <span className="text-xs font-mono text-white block">{formatLastSeen(server.last_seen)}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Actions Footer */}
-              <div className="flex justify-between items-center border-t border-white/5 pt-3 mt-4">
-                <button
-                  onClick={() => onViewServer(server.id)}
-                  className="flex items-center gap-1.5 text-[10px] font-mono text-accent hover:underline uppercase cursor-pointer"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>Inspect</span>
-                </button>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => openEditModal(server)}
-                    className="p-1.5 bg-hover rounded-lg border border-white/5 text-secondaryText hover:text-white transition-all cursor-pointer"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => openDeleteModal(server)}
-                    className="p-1.5 bg-hover rounded-lg border border-white/5 text-secondaryText hover:text-danger transition-all cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            </motion.div>
+              server={server}
+              metrics={latestMetrics}
+              onViewServer={onViewServer}
+              onEdit={openEditModal}
+              onDelete={openDeleteModal}
+            />
           ))}
         </AnimatePresence>
       </div>
@@ -389,17 +352,13 @@ export default function ServersTab({ onViewServer }) {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <label className="text-[10px] text-secondaryText font-mono uppercase tracking-wider">Operating System</label>
-                      <select
+                      <input
+                        type="text"
+                        placeholder="Operating System"
                         value={os}
                         onChange={(e) => setOs(e.target.value)}
                         className="w-full bg-surface border border-white/5 p-3 rounded-xl text-xs text-white focus:outline-none focus:border-accent/40"
-                      >
-                        <option value="Ubuntu 24.04">Ubuntu 24.04</option>
-                        <option value="Debian 12">Debian 12</option>
-                        <option value="CentOS Stream 9">CentOS Stream 9</option>
-                        <option value="Windows Server 2022">Windows Server 2022</option>
-                        <option value="macOS Sequoia">macOS Sequoia</option>
-                      </select>
+                      />
                     </div>
 
                     <div className="space-y-1">
@@ -410,6 +369,30 @@ export default function ServersTab({ onViewServer }) {
                         placeholder="e.g. 192.168.1.10"
                         value={ipAddress}
                         onChange={(e) => setIpAddress(e.target.value)}
+                        className="w-full bg-surface border border-white/5 p-3 rounded-xl text-xs text-white focus:outline-none focus:border-accent/40"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-secondaryText font-mono uppercase tracking-wider">Department (Optional)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Engineering"
+                        value={department}
+                        onChange={(e) => setDepartment(e.target.value)}
+                        className="w-full bg-surface border border-white/5 p-3 rounded-xl text-xs text-white focus:outline-none focus:border-accent/40"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-secondaryText font-mono uppercase tracking-wider">Location (Optional)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. US-East"
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
                         className="w-full bg-surface border border-white/5 p-3 rounded-xl text-xs text-white focus:outline-none focus:border-accent/40"
                       />
                     </div>
@@ -509,6 +492,30 @@ export default function ServersTab({ onViewServer }) {
                       placeholder="e.g. 192.168.1.10"
                       value={ipAddress}
                       onChange={(e) => setIpAddress(e.target.value)}
+                      className="w-full bg-surface border border-white/5 p-3 rounded-xl text-xs text-white focus:outline-none focus:border-accent/40"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-secondaryText font-mono uppercase tracking-wider">Department (Optional)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Engineering"
+                      value={department}
+                      onChange={(e) => setDepartment(e.target.value)}
+                      className="w-full bg-surface border border-white/5 p-3 rounded-xl text-xs text-white focus:outline-none focus:border-accent/40"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-secondaryText font-mono uppercase tracking-wider">Location (Optional)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. US-East"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
                       className="w-full bg-surface border border-white/5 p-3 rounded-xl text-xs text-white focus:outline-none focus:border-accent/40"
                     />
                   </div>

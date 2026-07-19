@@ -57,10 +57,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (username, email, password, firstName = '', lastName = '') => {
+  const register = async (username, email, password, firstName = '', lastName = '', role = 'INDIVIDUAL', organizationName = '', alertEmail = '') => {
     setError(null);
     try {
-      await apiRegister(username, email, password, firstName, lastName);
+      await apiRegister(username, email, password, firstName, lastName, role, organizationName, alertEmail);
       // Auto login after successful registration
       return await login(username, password);
     } catch (err) {

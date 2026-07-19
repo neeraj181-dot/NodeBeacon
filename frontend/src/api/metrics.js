@@ -11,3 +11,10 @@ export const getServerMetrics = async (serverId, limit = 100) => {
   });
   return response.data;
 };
+
+export const exportPDF = async () => {
+  const response = await api.get('metrics/export-pdf/', {
+    responseType: 'blob',
+  });
+  return response;
+};

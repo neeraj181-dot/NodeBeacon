@@ -33,7 +33,8 @@ export default function Login({ onLogin, onNavigate }) {
 
 
   return (
-    <div className="relative min-h-screen w-screen bg-[#070707] text-white flex overflow-hidden font-sans select-none">
+    <div className="relative min-h-screen w-screen bg-register text-white flex overflow-hidden font-sans select-none">
+      <div className="grid-overlay" />
       
       {/* Animated Canvas Wave Background */}
       <WaveBackground />
@@ -120,26 +121,36 @@ export default function Login({ onLogin, onNavigate }) {
         {/* RIGHT SIDE - Authentication Card */}
         <div className="w-full md:w-1/2 flex items-center justify-center p-6 md:p-12 lg:p-24">
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, ease: 'easeOut' }}
-            className="w-full max-w-md bg-[rgba(18,18,18,0.82)] backdrop-blur-[20px] border border-white/10 p-8 rounded-[24px] space-y-6 shadow-[0_0_30px_rgba(87,227,137,0.06)] relative overflow-hidden group hover:border-white/15 transition-all duration-300"
+            initial={{ opacity: 0, y: 15, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            className="w-full max-w-[460px] bg-[#0c0c0c]/90 backdrop-blur-[24px] border border-[#57E389]/25 p-8 rounded-[28px] space-y-5 shadow-[0_0_50px_rgba(87,227,137,0.08)] relative overflow-hidden group hover:border-[#57E389]/35 transition-all duration-300"
           >
             
             {/* Soft Ambient Glow effect in background of card */}
             <div className="absolute -top-16 -right-16 w-32 h-32 bg-accent/10 rounded-full blur-3xl pointer-events-none group-hover:bg-accent/15 transition-all duration-300"></div>
 
             {/* Logo Center (Icon -> Brand name -> Welcome back -> Subtitle) */}
-            <div className="flex flex-col items-center">
-              {/* App Icon (64px) */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.7, ease: 'easeOut' }}
-                className="mb-3"
-              >
-                <Logo size={64} showGlow={true} />
-              </motion.div>
+            <div className="flex flex-col items-center relative">
+              {/* Radial Highlight behind Logo */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-[#57E389]/10 rounded-full blur-[64px] pointer-events-none"></div>
+
+              {/* App Icon (64px) with Emerald Glow */}
+              <div className="relative mb-3 flex items-center justify-center">
+                <motion.div 
+                  animate={{ opacity: [0.35, 0.5, 0.35], scale: [1, 1.05, 1] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute w-20 h-20 bg-[#57E389]/30 rounded-full blur-2xl pointer-events-none"
+                />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.7, ease: 'easeOut' }}
+                  className="relative z-10"
+                >
+                  <Logo size={64} showGlow={true} />
+                </motion.div>
+              </div>
 
               {/* NodeBeacon Brand (Geist Bold) */}
               <h3 className="font-bold text-white text-[20px] tracking-[0.5px] font-sans">
@@ -147,7 +158,7 @@ export default function Login({ onLogin, onNavigate }) {
               </h3>
 
               {/* Welcome back */}
-              <h2 className="text-base font-semibold text-white tracking-wide mt-2">
+              <h2 className="text-sm font-semibold text-white tracking-wide mt-2">
                 Welcome back
               </h2>
               
@@ -254,14 +265,8 @@ export default function Login({ onLogin, onNavigate }) {
             </div>
 
             {/* Social Oauth Buttons */}
-            <div className="grid grid-cols-2 gap-3">
-              <button className="h-10 bg-[#111111]/50 border border-white/5 hover:border-white/10 hover:bg-[#111111] text-xs font-semibold rounded-xl text-white flex items-center justify-center gap-2 transition-all duration-200">
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                  <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.9-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.1.39-1.99 1.03-2.69-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.7 1.03 1.6 1.03 2.69 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z"/>
-                </svg>
-                <span>GitHub</span>
-              </button>
-              <button className="h-10 bg-[#111111]/50 border border-white/5 hover:border-white/10 hover:bg-[#111111] text-xs font-semibold rounded-xl text-white flex items-center justify-center gap-2 transition-all duration-200">
+            <div className="w-full">
+              <button className="w-full h-10 bg-[#111111]/50 border border-white/5 hover:border-white/10 hover:bg-[#111111] text-xs font-semibold rounded-xl text-white flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer">
                 <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                   <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>

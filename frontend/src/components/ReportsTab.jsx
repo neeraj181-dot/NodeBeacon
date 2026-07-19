@@ -2,10 +2,13 @@ import React, { useState } from 'react';
 import { FileText, Download, Calendar, Play, CheckCircle2, TrendingUp, ShieldAlert, Cpu } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { motion } from 'framer-motion';
+import { exportPDF } from '../api/metrics';
 
 export default function ReportsTab() {
   const [reportGenerated, setReportGenerated] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const mockCpuData = [
     { day: 'Mon', CPU: 34 },
@@ -19,10 +22,45 @@ export default function ReportsTab() {
 
   const handleGenerateReport = () => {
     setGenerating(true);
+    setErrorMsg('');
     setTimeout(() => {
       setReportGenerated(true);
       setGenerating(false);
     }, 1200);
+  };
+
+  const handleExportPDF = async () => {
+    setDownloading(true);
+    setErrorMsg('');
+    try {
+      const response = await exportPDF();
+      
+      // Determine file name from content-disposition header if available
+      let filename = 'NodeBeacon_Report.pdf';
+      const disposition = response.headers?.['content-disposition'];
+      if (disposition && disposition.indexOf('filename=') !== -1) {
+        const matches = disposition.match(/filename="?([^"]+)"?/);
+        if (matches != null && matches[1]) {
+          filename = matches[1];
+        }
+      }
+
+      // Create local URL blob reference and initiate download
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to export PDF report', err);
+      setErrorMsg('Failed to download PDF report. Please verify connection or try again later.');
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
@@ -48,6 +86,12 @@ export default function ReportsTab() {
           </button>
         )}
       </div>
+
+      {errorMsg && (
+        <div className="p-4 bg-danger/10 border border-danger/25 text-danger rounded-xl text-xs font-mono">
+          {errorMsg}
+        </div>
+      )}
 
       {!reportGenerated ? (
         /* Empty State */
@@ -90,11 +134,12 @@ export default function ReportsTab() {
               <span className="text-xs font-semibold font-mono uppercase tracking-wider text-white">Report generated for July 12 - July 19</span>
             </div>
             <button 
-              onClick={() => alert("Report downloaded successfully")}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-accent text-[#070707] font-bold text-[10px] uppercase font-mono tracking-wider hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-[0_0_15px_rgba(87,227,137,0.15)]"
+              onClick={handleExportPDF}
+              disabled={downloading}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-accent text-[#070707] font-bold text-[10px] uppercase font-mono tracking-wider hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-[0_0_15px_rgba(87,227,137,0.15)] disabled:opacity-50"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>Export PDF</span>
+              <span>{downloading ? 'Downloading...' : 'Export PDF'}</span>
             </button>
           </div>
 
