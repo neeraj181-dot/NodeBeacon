@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ServerProvider } from './contexts/ServerContext';
-import { AlertProvider } from './contexts/AlertContext';
+import { AlertProvider, useAlerts } from './contexts/AlertContext';
 
 import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
@@ -21,14 +21,53 @@ import LogsTab from './components/LogsTab';
 import ReportsTab from './components/ReportsTab';
 import IntegrationsTab from './components/IntegrationsTab';
 import SettingsTab from './components/SettingsTab';
+import MembersTab from './components/MembersTab';
 
 
 function MainApp() {
   const [isLoading, setIsLoading] = useState(true);
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [authPage, setAuthPage] = useState('login');
   const [currentTab, setCurrentTab] = useState('dashboard');
   const [selectedServerId, setSelectedServerId] = useState(null);
+  
+  // Desktop / Browser notifications hooks moved to top
+  const { alerts } = useAlerts();
+  const [notifiedAlerts, setNotifiedAlerts] = useState(new Set());
+
+  // Request browser Notification API permission when logged in
+  useEffect(() => {
+    if (isAuthenticated && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }
+  }, [isAuthenticated]);
+
+  // Dispatch browser popups when alerts status changes to Active
+  useEffect(() => {
+    if (isAuthenticated && alerts.length > 0 && 'Notification' in window && Notification.permission === 'granted') {
+      alerts.forEach(alert => {
+        if (alert.status === 'Active' && !notifiedAlerts.has(alert.id)) {
+          // Verify desktop alerts are enabled on user preferences
+          if (user?.enable_desktop_notifications !== false) {
+            const title = `NodeBeacon: ${alert.title}`;
+            const serverName = alert.server_details?.name || 'Unknown Host';
+            const options = {
+              body: `Server: ${serverName}\n${alert.description}`,
+              tag: `alert-${alert.id}`,
+            };
+            const notification = new Notification(title, options);
+            notification.onclick = () => {
+              window.focus();
+              setCurrentTab('alerts');
+            };
+          }
+          setNotifiedAlerts(prev => new Set([...prev, alert.id]));
+        }
+      });
+    }
+  }, [alerts, isAuthenticated, user, notifiedAlerts]);
 
   useEffect(() => {
     if (!authLoading) {
@@ -132,6 +171,10 @@ function MainApp() {
 
         {currentTab === 'settings' && (
           <SettingsTab />
+        )}
+
+        {currentTab === 'members' && (
+          <MembersTab />
         )}
 
       </div>

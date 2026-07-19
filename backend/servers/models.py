@@ -14,6 +14,15 @@ class Server(models.Model):
         related_name='servers',
         db_index=True
     )
+    organization = models.ForeignKey(
+        'users.Organization',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='servers'
+    )
+    department = models.CharField(max_length=255, blank=True, null=True)
+    location = models.CharField(max_length=255, blank=True, null=True)
     name = models.CharField(max_length=255)
     hostname = models.CharField(max_length=255)
     operating_system = models.CharField(max_length=255)

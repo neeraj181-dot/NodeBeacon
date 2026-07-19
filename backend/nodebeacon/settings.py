@@ -141,6 +141,10 @@ REST_FRAMEWORK = {
     ),
 }
 
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+]
+
 # Simple JWT Settings
 from datetime import timedelta
 SIMPLE_JWT = {
@@ -155,4 +159,19 @@ SIMPLE_JWT = {
 
 # CORS Configuration
 CORS_ALLOW_ALL_ORIGINS = True
+
+# Email Dispatch
+import os
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+
+if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp.gmail.com'
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@nodebeacon.net')
 
