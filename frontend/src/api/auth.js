@@ -1,89 +1,74 @@
-import api from './api';
+import axios from 'axios';
 
-export const login = async (username, password) => {
-  const response = await api.post('auth/login/', { username, password });
-  return response.data;
-};
+// Use the environment variable in production, fallback to localhost for local development
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
-export const register = async (username, email, password, firstName = '', lastName = '', role = 'INDIVIDUAL', organizationName = '', alertEmail = '') => {
-  const payload = {
-    username,
-    email,
-    password,
-    first_name: firstName,
-    last_name: lastName,
-    role,
-  };
-  if (role === 'ORGANIZATION_ADMIN') {
-    payload.organization_name = organizationName;
-    payload.alert_email = alertEmail;
+const api = axios.create({
+  baseURL: `${API_BASE_URL}/api/`,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 10000,
+});
+
+// Request Interceptor
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('access_token');
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Response Interceptor
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (
+      error.response &&
+      error.response.status === 401 &&
+      !originalRequest._retry
+    ) {
+      originalRequest._retry = true;
+
+      const refreshToken = localStorage.getItem('refresh_token');
+
+      if (refreshToken) {
+        try {
+          const response = await axios.post(
+            `${API_BASE_URL}/api/auth/refresh/`,
+            {
+              refresh: refreshToken,
+            }
+          );
+
+          const newAccessToken = response.data.access;
+
+          localStorage.setItem('access_token', newAccessToken);
+
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+
+          return api(originalRequest);
+        } catch (refreshError) {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          window.dispatchEvent(new Event('auth_logout'));
+        }
+      } else {
+        window.dispatchEvent(new Event('auth_logout'));
+      }
+    }
+
+    return Promise.reject(error);
   }
-  const response = await api.post('auth/register/', payload);
-  return response.data;
-};
+);
 
-export const getProfile = async () => {
-  const response = await api.get('auth/profile/');
-  return response.data;
-};
-
-export const updateProfile = async (profileData) => {
-  const response = await api.patch('auth/profile/', profileData);
-  return response.data;
-};
-
-export const sendTestEmail = async () => {
-  const response = await api.post('test-email/');
-  return response.data;
-};
-
-export const recoverPassword = async (email) => {
-  const response = await api.post('auth/recover-password/', { email });
-  return response.data;
-};
-
-export const changePassword = async (currentPassword, newPassword) => {
-  const response = await api.post('auth/change-password/', {
-    current_password: currentPassword,
-    new_password: newPassword,
-  });
-  return response.data;
-};
-
-// Organization settings
-export const getOrgSettings = async () => {
-  const response = await api.get('organization/settings/');
-  return response.data;
-};
-
-export const updateOrgSettings = async (settingsData) => {
-  const response = await api.patch('organization/settings/', settingsData);
-  return response.data;
-};
-
-// Member management
-export const getMembers = async () => {
-  const response = await api.get('organization/members/');
-  return response.data;
-};
-
-export const inviteMember = async (username, email, memberRole) => {
-  const response = await api.post('organization/members/', {
-    username,
-    email,
-    member_role: memberRole
-  });
-  return response.data;
-};
-
-export const updateMemberRole = async (id, memberRole) => {
-  const response = await api.patch(`organization/members/${id}/`, {
-    member_role: memberRole
-  });
-  return response.data;
-};
-
-export const removeMember = async (id) => {
-  const response = await api.delete(`organization/members/${id}/`);
-  return response.data;
-};
+export default api;
