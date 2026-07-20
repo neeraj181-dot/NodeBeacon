@@ -662,7 +662,7 @@ export default function ServersTab({ onViewServer }) {
               {/* Download CTA Button */}
               <div className="pt-2 border-t border-white/5">
                 <a
-                  href="http://127.0.0.1:8000/api/agent/download/"
+                  href={`${import.meta.env.VITE_API_URL}/api/agent/download/`}
                   download
                   className="w-full h-11 bg-accent text-[#070707] font-bold rounded-xl text-xs uppercase tracking-wider font-mono flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer shadow-[0_0_20px_rgba(87,227,137,0.15)] text-center"
                 >
