@@ -1,12 +1,16 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { useAuth } from './AuthContext';
 import { getAlerts, resolveAlert as apiResolve } from '../api/alerts';
+import { loadReadAlertIds, persistReadAlertIds } from './alertReadState';
 
 const AlertContext = createContext(null);
 
 export const AlertProvider = ({ children }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [alerts, setAlerts] = useState([]);
+  const [notificationAlerts, setNotificationAlerts] = useState([]);
+  const [notificationAlertsReady, setNotificationAlertsReady] = useState(false);
+  const [readAlertState, setReadAlertState] = useState({ userId: null, ids: new Set() });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
@@ -14,6 +18,39 @@ export const AlertProvider = ({ children }) => {
     severity: '',
     server: '',
   });
+
+  const userId = isAuthenticated ? user?.id : null;
+
+  useEffect(() => {
+    setNotificationAlerts([]);
+    setNotificationAlertsReady(false);
+  }, [isAuthenticated, userId]);
+
+  useEffect(() => {
+    let storage = null;
+    try {
+      storage = window.localStorage;
+    } catch {
+      // Read state remains session-only when browser storage is unavailable.
+    }
+    setReadAlertState({ userId, ids: loadReadAlertIds(storage, userId) });
+  }, [userId]);
+
+  const markAlertsRead = (alertIds) => {
+    let storage = null;
+    try {
+      storage = window.localStorage;
+    } catch {
+      // Keep the state in memory for this session if storage is unavailable.
+    }
+    const currentIds = readAlertState.userId === userId
+      ? readAlertState.ids
+      : loadReadAlertIds(storage, userId);
+    const ids = persistReadAlertIds(storage, userId, currentIds, alertIds);
+    setReadAlertState({ userId, ids });
+  };
+
+  const readAlertIds = readAlertState.userId === userId ? readAlertState.ids : new Set();
 
   const fetchAlerts = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -26,6 +63,17 @@ export const AlertProvider = ({ children }) => {
 
       const data = await getAlerts(activeFilters);
       setAlerts(data);
+      if (Object.keys(activeFilters).length === 0) {
+        setNotificationAlerts(data);
+        setNotificationAlertsReady(true);
+      } else {
+        try {
+          setNotificationAlerts(await getAlerts());
+          setNotificationAlertsReady(true);
+        } catch (notificationError) {
+          console.error('Error refreshing unfiltered alerts for desktop notifications', notificationError);
+        }
+      }
       setError(null);
     } catch (err) {
       console.error("Error fetching alerts", err);
@@ -47,8 +95,10 @@ export const AlertProvider = ({ children }) => {
       return () => clearInterval(intervalId);
     } else {
       setAlerts([]);
+      setNotificationAlerts([]);
+      setNotificationAlertsReady(false);
     }
-  }, [isAuthenticated, filters]); // Re-fetch on filter changes
+  }, [isAuthenticated, userId, filters]); // Re-fetch on account and filter changes
 
   const triggerResolve = async (id) => {
     try {
@@ -69,7 +119,7 @@ export const AlertProvider = ({ children }) => {
   };
 
   return (
-    <AlertContext.Provider value={{ alerts, loading, error, filters, setFilters, fetchAlerts, triggerResolve }}>
+    <AlertContext.Provider value={{ alerts, notificationAlerts, notificationAlertsReady, loading, error, filters, setFilters, fetchAlerts, triggerResolve, readAlertIds, markAlertsRead }}>
       {children}
     </AlertContext.Provider>
   );

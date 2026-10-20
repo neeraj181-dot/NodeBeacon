@@ -12,15 +12,8 @@ def build():
     
     # Define PyInstaller build options
     pyinstaller_args = [
-        main_script,
-        "--onefile",
-        "--noconsole",
-        "--name=NodeBeaconAgent",
-        "--hidden-import=win32timezone",
-        "--hidden-import=win32service",
-        "--hidden-import=win32serviceutil",
-        "--hidden-import=win32event",
-        "--hidden-import=servicemanager",
+        os.path.join(current_dir, 'NodeBeaconAgent.spec'),
+        "--noconfirm",
         f"--distpath={os.path.join(current_dir, 'dist')}",
         f"--workpath={os.path.join(current_dir, 'build')}",
     ]
@@ -28,9 +21,10 @@ def build():
     print(f"Building {main_script} using PyInstaller...")
     try:
         PyInstaller.__main__.run(pyinstaller_args)
-        print("\n[SUCCESS] Compilation complete! Executable located in 'agent/dist/NodeBeaconAgent.exe'")
+        print("\n[SUCCESS] Built agent/dist/NodeBeaconAgent/NodeBeaconAgent.exe. Keep _internal beside it.")
     except Exception as e:
         print(f"\n[ERROR] Build failed: {e}")
+        raise
 
 if __name__ == '__main__':
     build()

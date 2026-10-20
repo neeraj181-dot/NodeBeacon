@@ -1,204 +1,155 @@
-import os
-import sys
+"""Windows service and visible control UI entry points."""
 import logging
-import win32serviceutil
-import win32service
-import win32event
+from logging.handlers import RotatingFileHandler
+import sys
+import threading
+
 import servicemanager
+import win32api
+import win32event
+import win32service
+import win32serviceutil
+from config import data_dir
+from runtime import publish_unlock_status, run_unlock_notifications
+from unlock import UnlockEvents, run_interactive_unlock_listener
 
-# Resolve app data directory path (ProgramData in production, local directory in development)
-if getattr(sys, 'frozen', False):
-    app_data_dir = r"C:\ProgramData\NodeBeacon"
-else:
-    app_data_dir = os.path.dirname(os.path.abspath(__file__))
-    
-log_file = os.path.join(app_data_dir, "logs", "agent.log")
-
-try:
-    os.makedirs(os.path.dirname(log_file), exist_ok=True)
-    # Initialize standard logging
-    logging.basicConfig(
-        filename=log_file,
-        level=logging.INFO,
-        format='%(asctime)s [%(levelname)s] %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
-except Exception as e:
-    print(f"Error: Failed to initialize logging: {e}", file=sys.stderr)
-    sys.exit(1)
-
-# Set path relative loader to find config.json in app data path
-sys.path.insert(0, app_data_dir)
+SERVICE_NAME = 'NodeBeaconAgent'
 
 
+def run_interactive_listener_with_status(events, stop_event):
+    try:
+        run_interactive_unlock_listener(
+            events, stop_event,
+            on_registered=lambda: publish_unlock_status(
+                'Listening', 'Windows unlock listener is active and waiting for this PC to unlock.'),
+        )
+    except Exception as exc:
+        publish_unlock_status(
+            'Listener error',
+            'Windows session notifications could not start. Restart the agent and check its local log.',
+        )
+        logging.error('[NodeBeaconAgent] Interactive unlock listener stopped (%s).', type(exc).__name__)
 
-# Official pywin32 Windows Service Framework class
+def initialize_logging():
+    directory = data_dir() / 'logs'
+    directory.mkdir(parents=True, exist_ok=True)
+    handler = RotatingFileHandler(directory / 'agent.log', maxBytes=2 * 1024 * 1024, backupCount=3, encoding='utf-8')
+    handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
+    logging.getLogger().addHandler(handler)
+    logging.getLogger().setLevel(logging.INFO)
+
+class SingleInstance:
+    def __init__(self, name):
+        self.handle = win32event.CreateMutex(None, False, 'Global\\NodeBeacon.' + name)
+        self.acquired = win32api.GetLastError() != 183
+
+    def close(self):
+        win32api.CloseHandle(self.handle)
+
 class NodeBeaconAgentService(win32serviceutil.ServiceFramework):
-    _svc_name_ = "NodeBeaconAgent"
-    _svc_display_name_ = "NodeBeacon Monitoring Agent"
-    _svc_description_ = "NodeBeacon Infrastructure Monitoring Agent"
+    _svc_name_ = SERVICE_NAME
+    _svc_display_name_ = 'NodeBeacon Monitoring Agent'
+    _svc_description_ = 'Authorized PC monitoring with visible Start/Stop controls.'
 
     def __init__(self, args):
-        win32serviceutil.ServiceFramework.__init__(self, args)
-        self.hWaitStop = win32event.CreateEvent(None, 0, 0, None)
-        self.is_running = True
+        super().__init__(args)
+        self.stop_event = threading.Event()
+        self.unlock_events = UnlockEvents()
+
+    def GetAcceptedControls(self):
+        accepted = super().GetAcceptedControls()
+        return accepted | win32service.SERVICE_ACCEPT_SESSIONCHANGE
+
+    def SvcOtherEx(self, control, event_type, data):
+        if not self.unlock_events.receive(control, event_type, data, self.stop_event):
+            if control == win32service.SERVICE_CONTROL_SESSIONCHANGE:
+                logging.info('Ignored a non-unlock or invalid Windows session event.')
+        return 0
 
     def SvcStop(self):
-        logging.info("Service stopping: Received stop signal.")
         self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
-        win32event.SetEvent(self.hWaitStop)
-        self.is_running = False
+        self.stop_event.set()
 
     def SvcDoRun(self):
-        # Report start pending to the SCM
-        self.ReportServiceStatus(win32service.SERVICE_START_PENDING)
-        logging.info("Service starting...")
-        
-        # Report started running to the SCM (Resolves Error 1053)
-        self.ReportServiceStatus(win32service.SERVICE_RUNNING)
-        logging.info("Service started successfully.")
-        
-        try:
-            self.main()
-        except Exception as e:
-            logging.critical(f"Unhandled exception in SvcDoRun: {e}", exc_info=True)
-            self.ReportServiceStatus(win32service.SERVICE_STOPPED)
-            sys.exit(1)
-            
-        self.ReportServiceStatus(win32service.SERVICE_STOPPED)
-        logging.info("Service stopped.")
-
-    def main(self):
-        # Verify config.json exists before starting
-        config_path = os.path.join(app_data_dir, "config.json")
-        if not os.path.exists(config_path):
-            logging.error(f"Configuration file config.json not found in {app_data_dir}. Service stopping.")
+        initialize_logging()
+        lock = SingleInstance('Worker')
+        if not lock.acquired:
+            lock.close()
             return
-
-
         try:
-            # Imports occur inside service runtime - not during module import
-            from config import load_config
-            from collector import collect_all
-            from sender import send_metrics
-            
-            config = load_config()
-            server_url = config['server_url']
-            api_key = config['api_key']
-            interval = config.get('interval', 10)
-        except Exception as e:
-            logging.error(f"Failed to load config: {e}. Exiting service.", exc_info=True)
-            return
+            detector = threading.Thread(target=run_unlock_notifications,
+                args=(self.unlock_events.pending, self.stop_event), name='NodeBeaconUnlockNotifications', daemon=True)
+            detector.start()
+            logging.info('[NodeBeaconAgent] Windows service is accepting session-change notifications')
+            publish_unlock_status('Listening', 'Windows unlock listener is active and waiting for this PC to unlock.')
+            from runtime import run_agent
+            run_agent(self.stop_event)
+        except Exception:
+            logging.error('Agent stopped after a configuration or runtime error.')
+            from config import atomic_json
+            atomic_json(data_dir() / 'status.json', {'status': 'Error',
+                'error': 'Configuration unavailable or monitoring failed. Check local configuration and agent logs.'})
+        finally:
+            self.stop_event.set()
+            lock.close()
 
-        logging.info(f"Monitoring loop active. Target: {server_url}, Interval: {interval}s")
-
-        while self.is_running:
+def main():
+    argument = sys.argv[1] if len(sys.argv) > 1 else ''
+    if argument == '--diagnostics' and len(sys.argv) == 3:
+        from diagnostics import run
+        sys.exit(run(sys.argv[2]))
+    elif argument == '--probe-instance' and len(sys.argv) == 3:
+        from pathlib import Path
+        import time
+        lock = SingleInstance('DiagnosticWorker')
+        try:
+            Path(sys.argv[2]).write_text('acquired' if lock.acquired else 'duplicate', encoding='utf-8')
+            if lock.acquired:
+                time.sleep(5)
+        finally:
+            lock.close()
+    elif argument == '--service':
+        servicemanager.Initialize()
+        servicemanager.PrepareToHostSingle(NodeBeaconAgentService)
+        servicemanager.StartServiceCtrlDispatcher()
+    elif argument in ('install', 'remove', 'start', 'stop', 'restart', 'debug'):
+        win32serviceutil.HandleCommandLine(NodeBeaconAgentService)
+    elif argument == '--console':
+        initialize_logging()
+        lock = SingleInstance('Worker')
+        if not lock.acquired:
+            raise RuntimeError('NodeBeacon monitoring is already running.')
+        try:
+            stop_event = threading.Event()
+            unlock_events = UnlockEvents()
+            notifications = threading.Thread(
+                target=run_unlock_notifications,
+                args=(unlock_events.pending, stop_event),
+                name='NodeBeaconUnlockNotifications', daemon=True,
+            )
+            listener = threading.Thread(
+                target=run_interactive_listener_with_status,
+                args=(unlock_events, stop_event),
+                name='NodeBeaconSessionListener', daemon=True,
+            )
+            notifications.start()
+            listener.start()
+            from runtime import run_agent
             try:
-                logging.info("Collecting metrics...")
-                metrics = collect_all()
-                api_payload = {
-                    'cpu_usage': metrics['cpu_usage'],
-                    'memory_usage': metrics['memory_usage'],
-                    'disk_usage': metrics['disk_usage'],
-                    'network_in': metrics['network_in'],
-                    'network_out': metrics['network_out'],
-                    'uptime': metrics['uptime']
-                }
-                
-                logging.info("Uploading metrics...")
-                success = send_metrics(server_url, api_key, api_payload)
-                if success:
-                    logging.info(f"Upload success: CPU={metrics['cpu_usage']}%, RAM={metrics['memory_usage']}%")
-                else:
-                    logging.error("Upload failed: Server returned error or timeout.")
-            except Exception as e:
-                logging.error(f"Unhandled exception in metrics loop: {e}", exc_info=True)
-
-            # Sleep for the configured interval, or wake up instantly on service stop event
-            result = win32event.WaitForSingleObject(self.hWaitStop, interval * 1000)
-            if result == win32event.WAIT_OBJECT_0:
-                break
-
-
-# Run in interactive console mode
-def run_console():
-    import time
-    
-    # Imports occur inside service runtime - not during module import
-    from config import load_config
-    from collector import collect_all
-    from sender import send_metrics
-
-    logging.info("Starting agent in console mode.")
-    print("NodeBeacon Agent running in console mode. Press Ctrl+C to exit.")
-    
-    config_path = os.path.join(app_data_dir, "config.json")
-    if not os.path.exists(config_path):
-        print(f"Error: Configuration file config.json not found in {app_data_dir}")
-        logging.error(f"Configuration file config.json not found in {app_data_dir}")
-        sys.exit(1)
-
-    
-    try:
-        config = load_config()
-        server_url = config['server_url']
-        api_key = config['api_key']
-        interval = config.get('interval', 10)
-    except Exception as e:
-        print(f"Error: Failed to load config: {e}")
-        logging.error(f"Failed to load config: {e}", exc_info=True)
-        sys.exit(1)
-
-    print(f"Target URL: {server_url}")
-    print(f"Interval:   {interval}s")
-
-    while True:
-        try:
-            print("Collecting metrics...")
-            metrics = collect_all()
-            api_payload = {
-                'cpu_usage': metrics['cpu_usage'],
-                'memory_usage': metrics['memory_usage'],
-                'disk_usage': metrics['disk_usage'],
-                'network_in': metrics['network_in'],
-                'network_out': metrics['network_out'],
-                'uptime': metrics['uptime']
-            }
-            print("Uploading metrics...")
-            success = send_metrics(server_url, api_key, api_payload)
-            if success:
-                print(f"Upload success: CPU={metrics['cpu_usage']}% | RAM={metrics['memory_usage']}%")
-                logging.info(f"Console metrics uploaded: CPU={metrics['cpu_usage']}%, RAM={metrics['memory_usage']}%")
-            else:
-                print("Upload failed.")
-                logging.error("Console metrics upload failed.")
-        except KeyboardInterrupt:
-            print("\nStopping console monitoring agent...")
-            break
-        except Exception as e:
-            print(f"Error: {e}")
-            logging.error(f"Error in console metrics loop: {e}", exc_info=True)
-            
-        time.sleep(interval)
-
+                run_agent(stop_event)
+            finally:
+                stop_event.set()
+                listener.join(timeout=3)
+                notifications.join(timeout=3)
+        finally:
+            lock.close()
+    elif argument == '--uninstall':
+        from uninstaller import uninstall
+        uninstall()
+    else:
+        from desktop import run_desktop
+        run_desktop()
 
 if __name__ == '__main__':
-    # Route execution based on CLI arguments
-    if len(sys.argv) > 1 and sys.argv[1] in ['install', 'remove', 'start', 'stop', 'restart', 'debug']:
-        try:
-            # Handle Windows service control commands
-            win32serviceutil.HandleCommandLine(NodeBeaconAgentService)
-        except Exception as e:
-            print(f"Service command failed: {e}")
-    elif len(sys.argv) > 1 and sys.argv[1] == '--console':
-        run_console()
-    else:
-        # Check if local configuration file exists
-        config_path = os.path.join(app_data_dir, "config.json")
-        if os.path.exists(config_path):
-            run_console()
-        else:
-            # Run Setup Wizard GUI
-            from installer_gui import run_installer_gui
-            run_installer_gui()
+    main()
 

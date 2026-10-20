@@ -16,8 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from django.http import JsonResponse, FileResponse, Http404
-import os
+from django.http import JsonResponse
 
 def api_root_view(request):
     return JsonResponse({
@@ -27,11 +26,7 @@ def api_root_view(request):
     })
 
 def download_agent_view(request):
-    file_path = r"d:\NodeBeacon\agent\dist\NodeBeaconAgent.exe"
-    if os.path.exists(file_path):
-        # Serve the compiled windows binary as an attachment
-        return FileResponse(open(file_path, 'rb'), as_attachment=True, filename='NodeBeaconAgent.exe')
-    raise Http404("Agent executable has not been compiled on the backend yet.")
+    return JsonResponse({'detail': 'Log in and select a device in Download Agent to obtain its complete Windows setup package.'}, status=410)
 
 urlpatterns = [
     path('', api_root_view, name='api_root'),

@@ -29,8 +29,8 @@ class MetricsListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         user = self.request.user
         if user.role in ['ORGANIZATION_ADMIN', 'MEMBER'] and user.organization:
-            return Metric.objects.filter(server__organization=user.organization)
-        return Metric.objects.filter(server__owner=user)
+            return Metric.objects.filter(server__organization=user.organization).order_by('-timestamp', '-pk')
+        return Metric.objects.filter(server__owner=user).order_by('-timestamp', '-pk')
 
     def perform_create(self, serializer):
         server = self.request.auth  # Server instance resolved by API Key auth
@@ -95,7 +95,7 @@ class ServerMetricsListView(generics.ListAPIView):
         else:
             server = get_object_or_404(Server, id=server_id, owner=user)
         
-        queryset = Metric.objects.filter(server=server)
+        queryset = Metric.objects.filter(server=server).order_by('-timestamp', '-pk')
         
         # Support limit parameter
         limit = self.request.query_params.get('limit')

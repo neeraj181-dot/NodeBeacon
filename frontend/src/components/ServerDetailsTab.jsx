@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+// React Router - useParams Hook (extracts route parameter from URL)
+import { useParams } from 'react-router-dom';
 import { getServer } from '../api/servers';
 import { getServerMetrics } from '../api/metrics';
 import { 
@@ -10,19 +12,25 @@ import {
 } from 'lucide-react';
 
 export default function ServerDetailsTab({ serverId, onBack }) {
+  // React Router - useParams Hook (Accesses dynamic ID parameter from route)
+  const routeParams = useParams();
+  const activeServerId = serverId || (routeParams?.id ? Number(routeParams.id) : null);
+
+  // React Hook - useState (Tracks active server data, metrics history, loading state, and time range)
   const [server, setServer] = useState(null);
   const [metrics, setMetrics] = useState([]);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('24h'); // '1h' | '24h' | '7d'
 
   const fetchData = async (silent = false) => {
+    if (!activeServerId) return;
     if (!silent) setLoading(true);
     try {
-      const serverData = await getServer(serverId);
+      const serverData = await getServer(activeServerId);
       setServer(serverData);
       
       // Fetch up to 200 items of history
-      const metricsData = await getServerMetrics(serverId, 200);
+      const metricsData = await getServerMetrics(activeServerId, 200);
       // Reverse history data so that charts render chronologically (left to right)
       setMetrics([...metricsData].reverse());
     } catch (err) {
@@ -32,6 +40,7 @@ export default function ServerDetailsTab({ serverId, onBack }) {
     }
   };
 
+  // React Hook - useEffect (Fetches metrics and sets up real-time polling interval)
   useEffect(() => {
     fetchData();
 
@@ -41,7 +50,7 @@ export default function ServerDetailsTab({ serverId, onBack }) {
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [serverId]);
+  }, [activeServerId]);
 
   if (loading && !server) {
     return (
@@ -249,11 +258,11 @@ export default function ServerDetailsTab({ serverId, onBack }) {
                       <stop offset="95%" stopColor="#57E389" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                  <XAxis dataKey="time" stroke="rgba(255,255,255,0.4)" fontSize={9} axisLine={false} tickLine={false} />
-                  <YAxis stroke="rgba(255,255,255,0.4)" fontSize={9} axisLine={false} tickLine={false} domain={[0, 100]} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
+                  <XAxis dataKey="time" stroke="var(--chart-label)" fontSize={9} axisLine={false} tickLine={false} />
+                  <YAxis stroke="var(--chart-label)" fontSize={9} axisLine={false} tickLine={false} domain={[0, 100]} />
                   <Tooltip 
-                    contentStyle={{ backgroundColor: '#101010', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px' }} 
+                    contentStyle={{ backgroundColor: 'var(--chart-tooltip)', color: 'var(--color-foreground)', border: '1px solid var(--chart-grid)', borderRadius: '8px' }}
                     labelStyle={{ color: '#8A8A8A', fontFamily: 'monospace', fontSize: '9px' }}
                     itemStyle={{ fontSize: '10px', color: '#fff' }}
                   />
@@ -275,11 +284,11 @@ export default function ServerDetailsTab({ serverId, onBack }) {
                       <stop offset="95%" stopColor="#5B8CFF" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                  <XAxis dataKey="time" stroke="rgba(255,255,255,0.4)" fontSize={9} axisLine={false} tickLine={false} />
-                  <YAxis stroke="rgba(255,255,255,0.4)" fontSize={9} axisLine={false} tickLine={false} domain={[0, 100]} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
+                  <XAxis dataKey="time" stroke="var(--chart-label)" fontSize={9} axisLine={false} tickLine={false} />
+                  <YAxis stroke="var(--chart-label)" fontSize={9} axisLine={false} tickLine={false} domain={[0, 100]} />
                   <Tooltip 
-                    contentStyle={{ backgroundColor: '#101010', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px' }} 
+                    contentStyle={{ backgroundColor: 'var(--chart-tooltip)', color: 'var(--color-foreground)', border: '1px solid var(--chart-grid)', borderRadius: '8px' }}
                     labelStyle={{ color: '#8A8A8A', fontFamily: 'monospace', fontSize: '9px' }}
                     itemStyle={{ fontSize: '10px', color: '#fff' }}
                   />
@@ -301,13 +310,13 @@ export default function ServerDetailsTab({ serverId, onBack }) {
                       <stop offset="95%" stopColor="#FFFFFF" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                  <XAxis dataKey="time" stroke="rgba(255,255,255,0.4)" fontSize={9} axisLine={false} tickLine={false} />
-                  <YAxis stroke="rgba(255,255,255,0.4)" fontSize={9} axisLine={false} tickLine={false} domain={[0, 100]} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
+                  <XAxis dataKey="time" stroke="var(--chart-label)" fontSize={9} axisLine={false} tickLine={false} />
+                  <YAxis stroke="var(--chart-label)" fontSize={9} axisLine={false} tickLine={false} domain={[0, 100]} />
                   <Tooltip 
-                    contentStyle={{ backgroundColor: '#101010', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px' }} 
-                    labelStyle={{ color: '#8A8A8A', fontFamily: 'monospace', fontSize: '9px' }}
-                    itemStyle={{ fontSize: '10px', color: '#fff' }}
+                    contentStyle={{ backgroundColor: 'var(--chart-tooltip)', color: 'var(--color-foreground)', border: '1px solid var(--chart-grid)', borderRadius: '8px' }}
+                    labelStyle={{ color: 'var(--chart-label)', fontFamily: 'monospace', fontSize: '9px' }}
+                    itemStyle={{ fontSize: '10px', color: 'var(--color-foreground)' }}
                   />
                   <Area type="monotone" dataKey="Disk" stroke="#FFFFFF" strokeWidth={1.5} fillOpacity={1} fill="url(#diskColor)" />
                 </AreaChart>
@@ -321,19 +330,19 @@ export default function ServerDetailsTab({ serverId, onBack }) {
             <div className="h-56 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                  <XAxis dataKey="time" stroke="rgba(255,255,255,0.4)" fontSize={9} axisLine={false} tickLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
+                  <XAxis dataKey="time" stroke="var(--chart-label)" fontSize={9} axisLine={false} tickLine={false} />
                   <YAxis 
-                    stroke="rgba(255,255,255,0.4)" 
+                    stroke="var(--chart-label)"
                     fontSize={9} 
                     axisLine={false} 
                     tickLine={false} 
                     tickFormatter={(v) => formatBytes(v)}
                   />
                   <Tooltip 
-                    contentStyle={{ backgroundColor: '#101010', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px' }} 
-                    labelStyle={{ color: '#8A8A8A', fontFamily: 'monospace', fontSize: '9px' }}
-                    itemStyle={{ fontSize: '10px', color: '#fff' }}
+                    contentStyle={{ backgroundColor: 'var(--chart-tooltip)', color: 'var(--color-foreground)', border: '1px solid var(--chart-grid)', borderRadius: '8px' }}
+                    labelStyle={{ color: 'var(--chart-label)', fontFamily: 'monospace', fontSize: '9px' }}
+                    itemStyle={{ fontSize: '10px', color: 'var(--color-foreground)' }}
                     formatter={(value) => [formatBytes(value)]}
                   />
                   <Line type="monotone" dataKey="Download" stroke="#57E389" strokeWidth={1.5} dot={false} />

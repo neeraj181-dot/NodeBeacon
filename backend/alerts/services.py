@@ -11,6 +11,15 @@ def send_alert_email(user, server, title, description, metric=None):
     if not user.enable_email_notifications:
         return
 
+    # Check notification category preferences
+    if title == "Server Offline" and not getattr(user, 'notify_offline_email', True):
+        logger.info(f"Offline alert email suppressed for user {user.username} (preference disabled).")
+        return
+
+    if title in ["High CPU Usage", "High Memory Usage", "Disk Usage Critical"] and not getattr(user, 'notify_critical_email', True):
+        logger.info(f"Critical alert email suppressed for user {user.username} (preference disabled).")
+        return
+
     # Check if user has an organization
     recipients = []
     if user.role in ['ORGANIZATION_ADMIN', 'MEMBER'] and user.organization:
@@ -24,6 +33,11 @@ def send_alert_email(user, server, title, description, metric=None):
             recipients.extend(extra_recipients)
     else:
         # Individual account routing
+        is_verified = getattr(user, 'email_verified', False) or (bool(user.recipient_email) and not getattr(user, 'email_unverified_recipient', None))
+        if not is_verified:
+            logger.info(f"Alert email suppressed for user {user.username}: recipient email is not verified.")
+            return
+
         rec = user.recipient_email or user.email
         if rec:
             recipients.append(rec)
@@ -197,13 +211,14 @@ def send_alert_email(user, server, title, description, metric=None):
 
     try:
         from django.core.mail import EmailMultiAlternatives
+        from users.email_service import dispatch_email
         from_email = getattr(settings, 'EMAIL_HOST_USER', 'noreply@nodebeacon.net') or 'noreply@nodebeacon.net'
         msg = EmailMultiAlternatives(subject, text_content, from_email, recipients)
         msg.attach_alternative(html_content, "text/html")
-        msg.send(fail_silently=False)
+        dispatch_email(msg)
         logger.info(f"NodeBeacon alert email dispatched successfully to {recipients} for {server.name}")
     except Exception as e:
-        logger.error(f"Failed to dispatch alert email to {recipient}: {e}", exc_info=True)
+        logger.error(f"Failed to dispatch alert email to {recipients}: {e}", exc_info=True)
 
 def evaluate_metrics_alerts(metric):
     """

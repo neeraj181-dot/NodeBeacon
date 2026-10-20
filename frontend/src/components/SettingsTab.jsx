@@ -1,804 +1,460 @@
-import React, { useState, useEffect } from 'react';
-import { User, Shield, Eye, Bell, ToggleLeft, ToggleRight, Check, Key } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { AlertCircle, Check, Eye, EyeOff, ExternalLink, LoaderCircle, LockKeyhole, ShieldCheck, UserRound, BellRing, Building2, Bot } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { motion, AnimatePresence } from 'framer-motion';
-import { updateProfile, changePassword } from '../api/auth';
-import { EyeOff, Lock, CheckCircle, ShieldCheck, HelpCircle, Laptop, Smartphone, Globe, Trash2, CheckCircle2, LockKeyhole, Activity, ShieldAlert } from 'lucide-react';
+import { changePassword, getTelegramSettings, updateProfile } from '../api/auth';
+import {
+  getDesktopNotificationDiagnostics,
+  requestDesktopNotificationPermission,
+  showTestDesktopNotification,
+  watchNotificationLifecycle,
+} from './desktopNotifications';
 
-export default function SettingsTab() {
-  const { user } = useAuth();
-  const [activeSection, setActiveSection] = useState('profile');
+const sectionClass = 'rounded-2xl border border-foreground/10 bg-card p-5 sm:p-6';
+const inputClass = 'h-10 w-full rounded-xl border border-foreground/10 bg-surface/60 px-3.5 text-sm text-foreground outline-none transition placeholder:text-secondaryText focus:border-accent/50 focus:ring-2 focus:ring-accent/10 disabled:opacity-60';
+const labelClass = 'mb-2 block text-[11px] font-semibold uppercase tracking-[0.12em] text-secondaryText';
+
+function SectionHeading({ id, icon: Icon, title, description }) {
+  return (
+    <div className="mb-5 flex items-start gap-3 border-b border-foreground/10 pb-4">
+      <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-accent/20 bg-accent/10 text-accent">
+        <Icon className="h-4 w-4" aria-hidden="true" />
+      </div>
+      <div>
+        <h2 id={id} className="font-mono text-sm font-bold uppercase tracking-[0.12em] text-foreground">{title}</h2>
+        {description && <p className="mt-1 text-sm leading-6 text-secondaryText">{description}</p>}
+      </div>
+    </div>
+  );
+}
+
+export default function SettingsTab({ onNavigateTab }) {
+  const { user, updateUser } = useAuth();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  
-  // Profile state
   const [firstName, setFirstName] = useState(user?.first_name || '');
   const [lastName, setLastName] = useState(user?.last_name || '');
   const [email, setEmail] = useState(user?.email || '');
-
-  // Toggle & Threshold states
-  const [emailNotifs, setEmailNotifs] = useState(user?.enable_email_notifications ?? true);
   const [desktopNotifs, setDesktopNotifs] = useState(user?.enable_desktop_notifications ?? true);
-  const [recipientEmail, setRecipientEmail] = useState(user?.recipient_email || '');
+  const [desktopPermission, setDesktopPermission] = useState(() => typeof Notification === 'undefined' ? 'unsupported' : Notification.permission);
+  const [desktopBusy, setDesktopBusy] = useState(false);
+  const [testingDesktop, setTestingDesktop] = useState(false);
+  const [desktopMessage, setDesktopMessage] = useState({ type: '', message: '' });
+  const [desktopDiagnostics, setDesktopDiagnostics] = useState(() => ({
+    ...getDesktopNotificationDiagnostics(),
+    serviceWorkerStatus: 'checking',
+  }));
+  const [telegram, setTelegram] = useState({ loading: true, error: false, connected: false, botInfoAvailable: false, botName: '', botUsername: '' });
   const [cpuThreshold, setCpuThreshold] = useState(user?.cpu_threshold || 90);
   const [memoryThreshold, setMemoryThreshold] = useState(user?.memory_threshold || 90);
   const [diskThreshold, setDiskThreshold] = useState(user?.disk_threshold || 95);
   const [heartbeatTimeout, setHeartbeatTimeout] = useState(user?.heartbeat_timeout || 60);
 
-  // Security View States
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-
   const [updatingPassword, setUpdatingPassword] = useState(false);
   const [securityFeedback, setSecurityFeedback] = useState({ type: '', message: '' });
 
-  // Security toggles (UI State only)
-  const [alertLogin, setAlertLogin] = useState(true);
-  const [browserAlert, setBrowserAlert] = useState(true);
-  const [rememberDevice, setRememberDevice] = useState(true);
-  const [autoLogout, setAutoLogout] = useState(false);
   useEffect(() => {
-    if (user) {
-      setFirstName(user.first_name || '');
-      setLastName(user.last_name || '');
-      setEmail(user.email || '');
-      setEmailNotifs(user.enable_email_notifications ?? true);
-      setDesktopNotifs(user.enable_desktop_notifications ?? true);
-      setRecipientEmail(user.recipient_email || '');
-      setCpuThreshold(user.cpu_threshold || 90);
-      setMemoryThreshold(user.memory_threshold || 90);
-      setDiskThreshold(user.disk_threshold || 95);
-      setHeartbeatTimeout(user.heartbeat_timeout || 60);
-    }
+    if (!user) return;
+    setFirstName(user.first_name || '');
+    setLastName(user.last_name || '');
+    setEmail(user.email || '');
+    setDesktopNotifs(user.enable_desktop_notifications ?? true);
+    setCpuThreshold(user.cpu_threshold || 90);
+    setMemoryThreshold(user.memory_threshold || 90);
+    setDiskThreshold(user.disk_threshold || 95);
+    setHeartbeatTimeout(user.heartbeat_timeout || 60);
   }, [user]);
 
-  const sections = [
-    { id: 'profile', name: 'Profile Settings', icon: User },
-    { id: 'security', name: 'Security & Auth', icon: Shield },
-    { id: 'notifications', name: 'Alarms & Alerting', icon: Bell },
-  ];
+  useEffect(() => {
+    let current = true;
+    const refreshDiagnostics = () => {
+      const diagnostics = getDesktopNotificationDiagnostics();
+      setDesktopPermission(diagnostics.permission);
+      setDesktopDiagnostics({
+        ...diagnostics,
+        serviceWorkerStatus: diagnostics.serviceWorkerSupported ? 'checking' : 'unsupported',
+      });
+      if (!diagnostics.serviceWorkerSupported) return;
+      const registrationPromise = window.__nodeBeaconNotificationRegistrationPromise
+        || window.navigator.serviceWorker.ready;
+      Promise.resolve(registrationPromise).then(registration => {
+        if (!current) return;
+        setDesktopDiagnostics(previous => ({
+          ...previous,
+          serviceWorkerStatus: registration?.active ? 'registered and active' : registration ? 'registered, inactive' : 'registration failed',
+          serviceWorkerController: Boolean(window.navigator.serviceWorker.controller),
+        }));
+      }).catch(error => {
+        console.warn('[DesktopNotification] Could not inspect service worker registration:', error);
+        if (current) setDesktopDiagnostics(previous => ({ ...previous, serviceWorkerStatus: 'status unavailable' }));
+      });
+    };
+    refreshDiagnostics();
+    window.addEventListener('focus', refreshDiagnostics);
+    window.navigator.serviceWorker?.addEventListener('controllerchange', refreshDiagnostics);
+    return () => {
+      current = false;
+      window.removeEventListener('focus', refreshDiagnostics);
+      window.navigator.serviceWorker?.removeEventListener('controllerchange', refreshDiagnostics);
+    };
+  }, []);
 
-  if (user?.role === 'ORGANIZATION_ADMIN' || user?.role === 'MEMBER') {
-    sections.push({ id: 'organization', name: 'Organization Settings', icon: HelpCircle }); // Fallback icon or import Building
-  }
+  useEffect(() => {
+    let current = true;
+    getTelegramSettings()
+      .then(data => {
+        if (!current) return;
+        setTelegram({
+          loading: false,
+          error: Boolean(data.configured && !data.bot_info_available),
+          connected: Boolean(data.connected),
+          botInfoAvailable: Boolean(data.bot_info_available),
+          botName: data.bot_name || '',
+          botUsername: data.bot_username || '',
+        });
+      })
+      .catch(() => {
+        if (current) setTelegram(value => ({ ...value, loading: false, error: true }));
+      });
+    return () => { current = false; };
+  }, []);
 
-  const handleSave = async (e) => {
-    if (e) e.preventDefault();
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
     setSaving(true);
     setSaved(false);
     try {
-      const payload = {
+      const updatedUser = await updateProfile({
         first_name: firstName,
         last_name: lastName,
-        email: email,
-        enable_email_notifications: emailNotifs,
-        enable_desktop_notifications: desktopNotifs,
-        recipient_email: recipientEmail || null,
-        cpu_threshold: parseFloat(cpuThreshold),
-        memory_threshold: parseFloat(memoryThreshold),
-        disk_threshold: parseFloat(diskThreshold),
-        heartbeat_timeout: parseInt(heartbeatTimeout),
-      };
-      await updateProfile(payload);
+        email,
+      });
+      updateUser(updatedUser);
       setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      window.setTimeout(() => setSaved(false), 2500);
     } catch (err) {
-      console.error('Failed to update settings preferences', err);
-      alert('Failed to save settings configurations.');
+      console.error('Failed to update profile', err);
+      alert('Failed to save profile changes. Please try again.');
     } finally {
       setSaving(false);
     }
   };
 
+  const handleSaveAlertSettings = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setSaved(false);
+    try {
+      const updatedUser = await updateProfile({
+        cpu_threshold: parseFloat(cpuThreshold),
+        memory_threshold: parseFloat(memoryThreshold),
+        disk_threshold: parseFloat(diskThreshold),
+        heartbeat_timeout: parseInt(heartbeatTimeout, 10),
+      });
+      updateUser(updatedUser);
+      setSaved(true);
+      window.setTimeout(() => setSaved(false), 2500);
+    } catch (err) {
+      console.error('Failed to update alert thresholds', err);
+      alert('Failed to save alert settings. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const requestDesktopPermission = async () => {
+    setDesktopMessage({ type: '', message: '' });
+    try {
+      const result = await requestDesktopNotificationPermission();
+      setDesktopPermission(result.permission);
+      if (!result.supported) {
+        setDesktopMessage({ type: 'error', message: 'This browser does not support desktop notifications.' });
+        return false;
+      }
+      if (result.permission === 'denied') {
+        setDesktopMessage({ type: 'error', message: 'Browser notification permission is blocked. Enable it in this site’s browser settings, then try again.' });
+        return false;
+      }
+      if (result.permission !== 'granted') {
+        setDesktopMessage({ type: 'error', message: 'Allow browser notifications to receive NodeBeacon alerts on your desktop.' });
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('Could not request browser notification permission', error);
+      setDesktopMessage({ type: 'error', message: 'Could not check notification permission. Try again from your browser settings.' });
+      return false;
+    }
+  };
+
+  const handleDesktopToggle = async () => {
+    setDesktopBusy(true);
+    setDesktopMessage({ type: '', message: '' });
+    try {
+      if (!desktopNotifs && !(await requestDesktopPermission())) return;
+      const nextEnabled = !desktopNotifs;
+      const updatedUser = await updateProfile({ enable_desktop_notifications: nextEnabled });
+      updateUser(updatedUser);
+      setDesktopNotifs(Boolean(updatedUser.enable_desktop_notifications));
+      setDesktopMessage({ type: 'success', message: nextEnabled ? 'Desktop notifications enabled.' : 'Desktop notifications disabled.' });
+    } catch (error) {
+      console.error('Failed to update desktop notification preference', error);
+      setDesktopMessage({ type: 'error', message: 'Could not save the desktop notification setting. Try again.' });
+    } finally {
+      setDesktopBusy(false);
+    }
+  };
+
+  const handleGrantDesktopPermission = async () => {
+    const granted = await requestDesktopPermission();
+    if (!granted) return;
+    if (!desktopNotifs) await handleDesktopToggle();
+    else setDesktopMessage({ type: 'success', message: 'Browser permission granted. Desktop alerts are ready.' });
+  };
+
+  const handleTestDesktopNotification = async () => {
+    setTestingDesktop(true);
+    setDesktopMessage({ type: '', message: '' });
+    try {
+      if (!desktopNotifs) {
+        setDesktopMessage({ type: 'error', message: 'Turn on Desktop notifications before sending a test notification.' });
+        return;
+      }
+      if (!(await requestDesktopPermission())) return;
+      const diagnostics = getDesktopNotificationDiagnostics();
+      const nextDiagnostics = {
+        ...diagnostics,
+        serviceWorkerStatus: diagnostics.serviceWorkerSupported ? desktopDiagnostics.serviceWorkerStatus : 'unsupported',
+      };
+      setDesktopDiagnostics(nextDiagnostics);
+      console.info('[DesktopNotification] Notification.permission:', diagnostics.permission);
+      console.info('[DesktopNotification] Notification.maxActions:', diagnostics.maxActions ?? 'not reported');
+      console.info('[DesktopNotification] document.visibilityState:', diagnostics.visibilityState);
+      console.info('[DesktopNotification] window.isSecureContext:', diagnostics.secureContext);
+      console.info('[DesktopNotification] location.origin:', diagnostics.origin);
+      console.info('[DesktopNotification] navigator.userAgent:', diagnostics.userAgent);
+      console.info('[DesktopNotification] Service Worker:', nextDiagnostics.serviceWorkerStatus);
+      const delivery = await showTestDesktopNotification(window.Notification, window.navigator);
+      console.info('[DesktopNotification] Notification request accepted', { method: delivery.method });
+      setDesktopMessage({
+        type: 'info',
+        message: `Notification request accepted by Chrome${delivery.method === 'service-worker' ? ' via the service worker' : ''}. If no popup appears, check Windows notification settings. Windows display is not verified by the web app.`,
+      });
+      if (!delivery.notification) return;
+      watchNotificationLifecycle(delivery.notification, {
+        onShow: () => {
+          console.info('[DesktopNotification] test notification onshow; OS popup visibility is unverified.');
+          setDesktopMessage({ type: 'info', message: 'Browser reported its notification show event. Windows popup visibility is still unverified; check Windows notification settings if no toast appeared.' });
+        },
+        onError: event => {
+          console.error('[DesktopNotification] test notification error:', event?.type || 'unknown error');
+          setDesktopMessage({ type: 'error', message: 'The browser reported a notification error. Check the browser console and Windows notification settings.' });
+        },
+        onClose: () => {
+          console.info('[DesktopNotification] test notification close event; OS popup visibility is unverified.');
+          setDesktopMessage({ type: 'info', message: 'Browser reported that the test notification closed. Windows popup visibility is unverified.' });
+        },
+      });
+    } catch (error) {
+      console.error('[DesktopNotification] test notification error:', error);
+      setDesktopMessage({ type: 'error', message: error.message || 'Could not create the test notification.' });
+    } finally {
+      setTestingDesktop(false);
+    }
+  };
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    setUpdatingPassword(true);
+    setSecurityFeedback({ type: '', message: '' });
+    try {
+      const strongPassword = newPassword.length >= 8
+        && /[A-Z]/.test(newPassword)
+        && /[a-z]/.test(newPassword)
+        && /[0-9]/.test(newPassword)
+        && /[^A-Za-z0-9]/.test(newPassword);
+      if (!strongPassword) {
+        setSecurityFeedback({ type: 'error', message: 'Use at least 8 characters with uppercase, lowercase, a number, and a symbol.' });
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        setSecurityFeedback({ type: 'error', message: 'The new passwords do not match.' });
+        return;
+      }
+      await changePassword(currentPassword, newPassword);
+      setSecurityFeedback({ type: 'success', message: 'Password updated successfully.' });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      setSecurityFeedback({ type: 'error', message: err.response?.data?.error || 'Could not update the password. Check your current password and try again.' });
+    } finally {
+      setUpdatingPassword(false);
+    }
+  };
+
   return (
-    <div className="flex-1 overflow-y-auto p-8 bg-[#050505] text-white">
-      {/* Header */}
-      <div className="border-b border-white/5 pb-4 mb-8">
-        <h1 className="text-3xl font-bold tracking-tight font-mono uppercase text-white">
-          System settings
-        </h1>
-        <p className="text-secondaryText text-xs font-medium mt-1">
-          Customize profile variables, alerting configurations, and security credentials.
-        </p>
-      </div>
+    <main className="min-h-full flex-1 overflow-y-auto bg-background px-4 py-6 text-foreground sm:px-6 sm:py-8">
+      <div className="mx-auto max-w-3xl space-y-4 sm:space-y-5">
+        <header className="border-b border-foreground/10 pb-4">
+          <p className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-secondaryText">NodeBeacon / Account</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">System settings</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-secondaryText">Customize your NodeBeacon account, security, and monitoring preferences.</p>
+        </header>
 
-      <div className="flex flex-col lg:flex-row gap-8 items-start">
-        {/* Navigation Sidebar */}
-        <div className="w-full lg:w-[220px] flex flex-col gap-2 shrink-0">
-          {sections.map((section) => {
-            const Icon = section.icon;
-            const isActive = activeSection === section.id;
-            return (
-              <button
-                key={section.id}
-                onClick={() => setActiveSection(section.id)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-mono tracking-wider uppercase text-left transition-all cursor-pointer ${
-                  isActive 
-                    ? 'bg-white/5 border border-white/5 text-accent font-bold shadow-[0_0_15px_rgba(87,227,137,0.05)]' 
-                    : 'text-secondaryText font-medium hover:text-white hover:bg-white/[0.02]'
-                }`}
-              >
-                <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-accent' : 'text-secondaryText'}`} />
-                <span>{section.name}</span>
+        <section className={sectionClass} aria-labelledby="profile-settings-heading">
+          <SectionHeading id="profile-settings-heading" icon={UserRound} title="Profile" description="Manage the personal details associated with your account." />
+          <form onSubmit={handleSaveProfile} className="space-y-5">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <label className="block"><span className={labelClass}>First name</span><input type="text" required autoComplete="given-name" value={firstName} onChange={(e) => setFirstName(e.target.value)} className={inputClass} /></label>
+              <label className="block"><span className={labelClass}>Last name</span><input type="text" required autoComplete="family-name" value={lastName} onChange={(e) => setLastName(e.target.value)} className={inputClass} /></label>
+              <label className="block sm:col-span-2"><span className={labelClass}>Email address</span><input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} /></label>
+            </div>
+            <div className="flex flex-col-reverse gap-3 border-t border-foreground/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-secondaryText">Your profile changes are saved to your NodeBeacon account.</p>
+              <button type="submit" disabled={saving} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-accent px-5 text-xs font-semibold text-[#072111] transition hover:brightness-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-card disabled:cursor-wait disabled:opacity-60">
+                {saved ? <><Check className="h-4 w-4" />Changes saved</> : saving ? 'Saving…' : 'Save changes'}
               </button>
-            );
-          })}
-        </div>
+            </div>
+          </form>
+        </section>
 
-        {/* Content Form container */}
-        <div className={activeSection === 'security' ? "flex-1 w-full relative" : "flex-1 w-full max-w-xl glass-panel p-8 rounded-2xl relative"}>
-          
-          {activeSection === 'profile' && (
-            <form onSubmit={handleSave} className="space-y-6">
-              <h3 className="text-xs font-bold text-white font-mono uppercase tracking-wider border-b border-white/5 pb-3">
-                Update account details
-              </h3>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-secondaryText uppercase tracking-wider font-mono">First Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    className="w-full h-10 bg-[#101010]/80 border border-white/5 rounded-xl px-4 text-xs text-white focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/10"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-secondaryText uppercase tracking-wider font-mono">Last Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    className="w-full h-10 bg-[#101010]/80 border border-white/5 rounded-xl px-4 text-xs text-white focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/10"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-secondaryText uppercase tracking-wider font-mono">Email Address</label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full h-10 bg-[#101010]/80 border border-white/5 rounded-xl px-4 text-xs text-white focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/10"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={saving}
-                className="w-full h-10 bg-accent text-[#070707] font-bold rounded-xl text-xs uppercase tracking-wider font-mono flex items-center justify-center gap-1.5 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer shadow-[0_0_20px_rgba(87,227,137,0.15)] disabled:opacity-50"
-              >
-                {saving ? (
-                  <span>Saving configurations...</span>
-                ) : saved ? (
-                  <>
-                    <Check className="w-4 h-4" />
-                    <span>Settings Saved</span>
-                  </>
-                ) : (
-                  <span>Save Configuration</span>
-                )}
-              </button>
-            </form>
-          )}
-
-          {activeSection === 'security' && (
-            <motion.div 
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="space-y-8 text-white w-full"
-            >
-              {/* Floating top-right success toast */}
-              <AnimatePresence>
-                {securityFeedback.message && securityFeedback.type === 'success' && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: -20, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                    className="fixed top-6 right-6 z-50 p-4 rounded-xl text-xs font-mono bg-[#0c2e1b] border border-[#57E389]/40 text-[#57E389] shadow-[0_0_30px_rgba(87,227,137,0.15)] flex items-center gap-3"
-                  >
-                    <CheckCircle2 className="w-4 h-4 text-[#57E389]" />
-                    <span>{securityFeedback.message}</span>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Top layout: Password Form + Security Score Card */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                
-                {/* Password Security Card */}
-                <div className="lg:col-span-2 bg-[#090909] border border-white/5 p-6 rounded-2xl space-y-6">
-                  <div>
-                    <h3 className="text-base font-bold text-white flex items-center gap-2 font-mono uppercase tracking-wider">
-                      <span>🔐</span> Password Security
-                    </h3>
-                    <p className="text-xs text-secondaryText mt-1">
-                      Update your account password to keep your account secure.
-                    </p>
-                  </div>
-
-                  {securityFeedback.message && securityFeedback.type === 'error' && (
-                    <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl text-xs font-mono">
-                      {securityFeedback.message}
-                    </div>
-                  )}
-
-                  <form onSubmit={async (e) => {
-                    e.preventDefault();
-                    setUpdatingPassword(true);
-                    setSecurityFeedback({ type: '', message: '' });
-                    try {
-                      const hasLength = newPassword.length >= 8;
-                      const hasUpper = /[A-Z]/.test(newPassword);
-                      const hasLower = /[a-z]/.test(newPassword);
-                      const hasNumber = /[0-9]/.test(newPassword);
-                      const hasSpecial = /[^A-Za-z0-9]/.test(newPassword);
-                      if (!(hasLength && hasUpper && hasLower && hasNumber && hasSpecial)) {
-                        setSecurityFeedback({ type: 'error', message: 'Password is too weak.' });
-                        setUpdatingPassword(false);
-                        return;
-                      }
-                      if (newPassword !== confirmPassword) {
-                        setSecurityFeedback({ type: 'error', message: 'Passwords do not match.' });
-                        setUpdatingPassword(false);
-                        return;
-                      }
-                      await changePassword(currentPassword, newPassword);
-                      setSecurityFeedback({ type: 'success', message: 'Password updated successfully.' });
-                      setCurrentPassword('');
-                      setNewPassword('');
-                      setConfirmPassword('');
-                      setTimeout(() => setSecurityFeedback({ type: '', message: '' }), 5000);
-                    } catch (err) {
-                      const errorMsg = err.response?.data?.error || 'Current password is incorrect.';
-                      setSecurityFeedback({ type: 'error', message: errorMsg });
-                    } finally {
-                      setUpdatingPassword(false);
-                    }
-                  }} className="space-y-6">
-                    
-                    <div className="space-y-6">
-                      {/* Current Password */}
-                      <div className="space-y-2 relative">
-                        <label className="text-[10px] font-bold text-secondaryText uppercase tracking-wider font-mono">Current Password</label>
-                        <div className="relative">
-                          <input
-                            type={showCurrent ? "text" : "password"}
-                            required
-                            value={currentPassword}
-                            onChange={(e) => setCurrentPassword(e.target.value)}
-                            placeholder="••••••••"
-                            className="w-full h-11 bg-[#101010]/80 border border-white/5 rounded-xl px-4 pr-10 text-xs text-white focus:outline-none focus:border-[#57E389] focus:ring-1 focus:ring-[#57E389]/10 transition-all"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowCurrent(!showCurrent)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-secondaryText hover:text-white"
-                          >
-                            {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* New Password */}
-                      <div className="space-y-2 relative">
-                        <label className="text-[10px] font-bold text-secondaryText uppercase tracking-wider font-mono">New Password</label>
-                        <div className="relative">
-                          <input
-                            type={showNew ? "text" : "password"}
-                            required
-                            value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            placeholder="••••••••"
-                            className="w-full h-11 bg-[#101010]/80 border border-white/5 rounded-xl px-4 pr-10 text-xs text-white focus:outline-none focus:border-[#57E389] focus:ring-1 focus:ring-[#57E389]/10 transition-all"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowNew(!showNew)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-secondaryText hover:text-white"
-                          >
-                            {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                          </button>
-                        </div>
-
-                        {/* Password Strength Meter */}
-                        <div className="mt-3 space-y-2">
-                          <div className="flex justify-between items-center text-[10px] font-mono">
-                            <span className="text-secondaryText">Password Strength:</span>
-                            <span className={
-                              newPassword.length === 0 ? 'text-secondaryText' :
-                              newPassword.length < 6 ? 'text-rose-500 font-bold' :
-                              newPassword.length < 8 ? 'text-orange-400 font-bold' :
-                              (!/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword) || !/[^A-Za-z0-9]/.test(newPassword)) ? 'text-yellow-500 font-bold' :
-                              (newPassword.length < 12) ? 'text-lime-400 font-bold' : 'text-[#57E389] font-bold'
-                            }>
-                              {newPassword.length === 0 ? 'Not Entered' :
-                               newPassword.length < 6 ? 'Very Weak' :
-                               newPassword.length < 8 ? 'Weak' :
-                               (!/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword) || !/[^A-Za-z0-9]/.test(newPassword)) ? 'Medium' :
-                               (newPassword.length < 12) ? 'Strong' : 'Excellent'}
-                            </span>
-                          </div>
-                          <div className="h-1.5 bg-white/5 rounded-full overflow-hidden flex gap-1">
-                            <motion.div 
-                              className="h-full rounded-full flex-1 transition-colors duration-300"
-                              animate={{ 
-                                backgroundColor: newPassword.length === 0 ? '#1f1f1f' :
-                                                 newPassword.length < 6 ? '#EF4444' :
-                                                 newPassword.length < 8 ? '#F43F5E' : '#EAB308'
-                              }}
-                            />
-                            <motion.div 
-                              className="h-full rounded-full flex-1 transition-colors duration-300"
-                              animate={{ 
-                                backgroundColor: newPassword.length < 8 ? '#1f1f1f' :
-                                                 (!/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword) || !/[^A-Za-z0-9]/.test(newPassword)) ? '#EAB308' : '#84CC16'
-                              }}
-                            />
-                            <motion.div 
-                              className="h-full rounded-full flex-1 transition-colors duration-300"
-                              animate={{ 
-                                backgroundColor: (newPassword.length < 8 || !/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword) || !/[^A-Za-z0-9]/.test(newPassword)) ? '#1f1f1f' :
-                                                 (newPassword.length < 12) ? '#84CC16' : '#57E389'
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Confirm New Password */}
-                      <div className="space-y-2 relative">
-                        <label className="text-[10px] font-bold text-secondaryText uppercase tracking-wider font-mono">Confirm New Password</label>
-                        <div className="relative">
-                          <input
-                            type={showConfirm ? "text" : "password"}
-                            required
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            placeholder="••••••••"
-                            className="w-full h-11 bg-[#101010]/80 border border-white/5 rounded-xl px-4 pr-10 text-xs text-white focus:outline-none focus:border-[#57E389] focus:ring-1 focus:ring-[#57E389]/10 transition-all"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowConfirm(!showConfirm)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-secondaryText hover:text-white"
-                          >
-                            {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Requirements Chips */}
-                    <div className="space-y-2">
-                      <span className="text-[10px] font-bold text-secondaryText uppercase tracking-wider font-mono">Password Requirements</span>
-                      <div className="flex flex-wrap gap-2 pt-1">
-                        {[
-                          { label: '8 Characters', met: newPassword.length >= 8 },
-                          { label: 'Uppercase', met: /[A-Z]/.test(newPassword) },
-                          { label: 'Lowercase', met: /[a-z]/.test(newPassword) },
-                          { label: 'Number', met: /[0-9]/.test(newPassword) },
-                          { label: 'Symbol', met: /[^A-Za-z0-9]/.test(newPassword) },
-                        ].map((req, i) => (
-                          <motion.span 
-                            key={i}
-                            layout
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-mono border transition-all ${
-                              req.met 
-                                ? 'bg-[#57E389]/10 text-[#57E389] border-[#57E389]/20 font-bold' 
-                                : 'bg-white/5 text-secondaryText border-white/5'
-                            }`}
-                          >
-                            <span className={`w-1.5 h-1.5 rounded-full ${req.met ? 'bg-[#57E389] shadow-[0_0_8px_#57E389]' : 'bg-white/20'}`} />
-                            {req.label}
-                          </motion.span>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Submit Button */}
-                    <button
-                      type="submit"
-                      disabled={updatingPassword || !currentPassword || !newPassword || newPassword !== confirmPassword || newPassword.length < 8}
-                      className="w-full h-[52px] rounded-[14px] bg-[#57E389] text-[#070707] font-bold text-xs uppercase tracking-wider font-mono flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.99] hover:shadow-[0_0_25px_rgba(87,227,137,0.25)] cursor-pointer disabled:bg-white/5 disabled:text-secondaryText disabled:border-white/5 disabled:cursor-not-allowed disabled:scale-100 disabled:shadow-none"
-                    >
-                      {updatingPassword && (
-                        <span className="w-3.5 h-3.5 border-2 border-[#070707]/30 border-t-[#070707] rounded-full animate-spin" />
-                      )}
-                      <span>{updatingPassword ? 'Updating Password...' : 'Change Password'}</span>
+        <section className={sectionClass} aria-labelledby="security-settings-heading">
+          <SectionHeading id="security-settings-heading" icon={ShieldCheck} title="Security" description="Change your password using your current account credentials." />
+          {securityFeedback.message && <div role="status" className={`mb-5 rounded-xl border p-3 text-sm ${securityFeedback.type === 'success' ? 'border-accent/25 bg-accent/10 text-accent' : 'border-danger/25 bg-danger/10 text-danger'}`}>{securityFeedback.message}</div>}
+          <form onSubmit={handlePasswordChange} className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              {[
+                { label: 'Current password', value: currentPassword, setter: setCurrentPassword, visible: showCurrent, setVisible: setShowCurrent, autoComplete: 'current-password' },
+                { label: 'New password', value: newPassword, setter: setNewPassword, visible: showNew, setVisible: setShowNew, autoComplete: 'new-password' },
+                { label: 'Confirm new password', value: confirmPassword, setter: setConfirmPassword, visible: showConfirm, setVisible: setShowConfirm, autoComplete: 'new-password' },
+              ].map((field) => (
+                <label className="block" key={field.label}>
+                  <span className={labelClass}>{field.label}</span>
+                  <span className="relative block">
+                    <input type={field.visible ? 'text' : 'password'} required autoComplete={field.autoComplete} value={field.value} onChange={(e) => field.setter(e.target.value)} className={`${inputClass} pr-11`} />
+                    <button type="button" aria-label={`${field.visible ? 'Hide' : 'Show'} ${field.label.toLowerCase()}`} onClick={() => field.setVisible((value) => !value)} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-secondaryText transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#57E389]/60">
+                      {field.visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
-                  </form>
+                  </span>
+                </label>
+              ))}
+            </div>
+            <div className="flex flex-col gap-3 border-t border-white/[0.06] pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="flex items-center gap-2 text-xs text-secondaryText"><LockKeyhole className="h-4 w-4 shrink-0 text-accent" />Use 8+ characters, uppercase and lowercase letters, a number, and a symbol.</p>
+              <button type="submit" disabled={updatingPassword || !currentPassword || !newPassword || newPassword !== confirmPassword} className="h-10 shrink-0 rounded-xl border border-foreground/15 bg-foreground/[0.03] px-5 text-xs font-semibold text-foreground transition hover:border-accent/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40">{updatingPassword ? 'Updating…' : 'Update password'}</button>
+            </div>
+          </form>
+        </section>
+
+        <section className={sectionClass} aria-labelledby="alert-settings-heading">
+          <SectionHeading id="alert-settings-heading" icon={BellRing} title="Alerts & notifications" description="Configure how NodeBeacon delivers monitoring alerts." />
+          <form onSubmit={handleSaveAlertSettings} className="space-y-5">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <TelegramAlertStatus telegram={telegram} onManage={() => onNavigateTab?.('integrations')} />
+              <div className="rounded-xl border border-foreground/10 bg-surface/60 p-3.5">
+                <div className="flex items-start justify-between gap-4">
+                  <div><h3 className="text-sm font-semibold text-foreground">Desktop notifications</h3><p className="mt-1 text-xs leading-5 text-secondaryText">Show native browser notifications for new alerts and recoveries.</p></div>
+                  <PreferenceToggle title="Desktop notifications" checked={desktopNotifs} onChange={handleDesktopToggle} disabled={desktopBusy} />
                 </div>
-
-                {/* Security Status Card */}
-                <div className="bg-[#090909] border border-white/5 p-6 rounded-2xl space-y-6 lg:col-span-1">
-                  <div>
-                    <h3 className="text-base font-bold text-white flex items-center gap-2 font-mono uppercase tracking-wider">
-                      🛡️ Security Status
-                    </h3>
-                    <p className="text-xs text-secondaryText mt-1">
-                      Overview of account security configurations.
-                    </p>
-                  </div>
-
-                  {/* Dynamic Security Score & Progress Circle */}
-                  <div className="flex flex-col items-center justify-center py-4 bg-[#101010] border border-white/5 rounded-xl space-y-4">
-                    <div className="relative w-28 h-28 flex items-center justify-center">
-                      {/* SVG circle container */}
-                      <svg className="w-full h-full -rotate-90">
-                        <circle 
-                          cx="56" cy="56" r="48" 
-                          className="stroke-white/5 fill-transparent"
-                          strokeWidth="8"
-                        />
-                        <motion.circle 
-                          cx="56" cy="56" r="48" 
-                          className="stroke-[#57E389] fill-transparent"
-                          strokeWidth="8"
-                          strokeDasharray={2 * Math.PI * 48}
-                          initial={{ strokeDashoffset: 2 * Math.PI * 48 }}
-                          animate={{ 
-                            strokeDashoffset: 2 * Math.PI * 48 * (1 - (50 + (newPassword.length >= 8 ? 20 : 0) + (browserAlert ? 15 : 0) + (alertLogin ? 15 : 0)) / 100) 
-                          }}
-                          transition={{ duration: 0.8, ease: "easeOut" }}
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-2xl font-bold font-mono text-white">
-                          {50 + (newPassword.length >= 8 ? 20 : 0) + (browserAlert ? 15 : 0) + (alertLogin ? 15 : 0)}/100
-                        </span>
-                        <span className="text-[9px] text-[#57E389] font-bold uppercase tracking-wider font-mono">
-                          {50 + (newPassword.length >= 8 ? 20 : 0) + (browserAlert ? 15 : 0) + (alertLogin ? 15 : 0) >= 90 ? 'Excellent' : 'Good'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* List of Security Elements */}
-                  <div className="space-y-3 font-mono text-[10px] uppercase tracking-wider">
-                    <div className="flex items-center justify-between p-2.5 bg-white/[0.02] rounded-lg">
-                      <span className="text-secondaryText">Password Strength</span>
-                      <span className={newPassword.length >= 8 ? "text-[#57E389] font-bold" : "text-rose-400 font-bold"}>
-                        {newPassword.length >= 8 ? "✓ STRONG" : "○ WEAK"}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between p-2.5 bg-white/[0.02] rounded-lg">
-                      <span className="text-secondaryText">Email Verified</span>
-                      <span className="text-[#57E389] font-bold">✓ VERIFIED</span>
-                    </div>
-                    <div className="flex items-center justify-between p-2.5 bg-white/[0.02] rounded-lg">
-                      <span className="text-secondaryText">Login Alerts</span>
-                      <span className={alertLogin ? "text-[#57E389] font-bold" : "text-yellow-500 font-bold"}>
-                        {alertLogin ? "✓ ENABLED" : "○ DISABLED"}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between p-2.5 bg-white/[0.02] rounded-lg">
-                      <span className="text-secondaryText">2FA Status</span>
-                      <span className="text-rose-500 font-bold">○ DISABLED</span>
-                    </div>
-                  </div>
-
-                  {/* Metadata Fields */}
-                  <div className="pt-4 border-t border-white/5 space-y-2 text-[10px] text-secondaryText font-mono">
-                    <div className="flex justify-between">
-                      <span>Last Password Change:</span>
-                      <span className="text-white">Recent</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Last Login:</span>
-                      <span className="text-white">Just now</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Current Session:</span>
-                      <span className="text-white">Active</span>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* Authentication Settings Panel */}
-              <div className="bg-[#090909] border border-white/5 p-6 rounded-2xl space-y-6">
-                <div>
-                  <h3 className="text-base font-bold text-white flex items-center gap-2 font-mono uppercase tracking-wider">
-                    ⚙️ Authentication Settings
-                  </h3>
-                  <p className="text-xs text-secondaryText mt-1">
-                    Manage direct security alerts and session threshold behavior.
+                <div className="mt-3 flex items-center justify-between gap-2 border-t border-foreground/10 pt-3">
+                  <p className={`text-xs font-semibold ${desktopPermission === 'denied' || desktopPermission === 'unsupported' ? 'text-danger' : desktopNotifs && desktopPermission === 'granted' ? 'text-accent' : 'text-secondaryText'}`} role="status">
+                    {desktopPermission === 'denied' ? 'Blocked · Permission denied' : desktopPermission === 'unsupported' ? 'Unavailable · Notifications unsupported' : desktopNotifs && desktopPermission === 'granted' ? 'Enabled · Permission granted' : desktopNotifs ? 'Waiting for browser permission' : 'Off'}
                   </p>
+                  {desktopPermission === 'default' && <button type="button" onClick={handleGrantDesktopPermission} disabled={desktopBusy} className="shrink-0 text-xs font-semibold text-accent hover:underline disabled:opacity-50">Allow notifications</button>}
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Email Login Alerts Card */}
-                  <div className="flex items-center justify-between p-4 bg-[#101010] border border-white/5 rounded-xl hover:border-white/10 transition-all hover:translate-y-[-2px] duration-200">
-                    <div>
-                      <h4 className="text-xs font-bold text-white font-mono uppercase">Email Login Alerts</h4>
-                      <p className="text-[10px] text-secondaryText mt-1">Receive immediate emails for new machine logins.</p>
-                    </div>
-                    <button type="button" onClick={() => setAlertLogin(!alertLogin)} className="cursor-pointer">
-                      {alertLogin ? <ToggleRight className="w-8 h-8 text-[#57E389]" /> : <ToggleLeft className="w-8 h-8 text-secondaryText" />}
-                    </button>
-                  </div>
-
-                  {/* Browser Notifications Card */}
-                  <div className="flex items-center justify-between p-4 bg-[#101010] border border-white/5 rounded-xl hover:border-white/10 transition-all hover:translate-y-[-2px] duration-200">
-                    <div>
-                      <h4 className="text-xs font-bold text-white font-mono uppercase">Browser Notifications</h4>
-                      <p className="text-[10px] text-secondaryText mt-1">Display push alert warnings within active browser tabs.</p>
-                    </div>
-                    <button type="button" onClick={() => setBrowserAlert(!browserAlert)} className="cursor-pointer">
-                      {browserAlert ? <ToggleRight className="w-8 h-8 text-[#57E389]" /> : <ToggleLeft className="w-8 h-8 text-secondaryText" />}
-                    </button>
-                  </div>
-
-                  {/* Remember Device Card */}
-                  <div className="flex items-center justify-between p-4 bg-[#101010] border border-white/5 rounded-xl hover:border-white/10 transition-all hover:translate-y-[-2px] duration-200">
-                    <div>
-                      <h4 className="text-xs font-bold text-white font-mono uppercase">Remember Device</h4>
-                      <p className="text-[10px] text-secondaryText mt-1">Maintain active 2FA credentials on this device for 30 days.</p>
-                    </div>
-                    <button type="button" onClick={() => setRememberDevice(!rememberDevice)} className="cursor-pointer">
-                      {rememberDevice ? <ToggleRight className="w-8 h-8 text-[#57E389]" /> : <ToggleLeft className="w-8 h-8 text-secondaryText" />}
-                    </button>
-                  </div>
-
-                  {/* Auto Logout Card */}
-                  <div className="flex items-center justify-between p-4 bg-[#101010] border border-white/5 rounded-xl hover:border-white/10 transition-all hover:translate-y-[-2px] duration-200">
-                    <div>
-                      <h4 className="text-xs font-bold text-white font-mono uppercase">Automatic Logout</h4>
-                      <p className="text-[10px] text-secondaryText mt-1">Logout automatically after 30 minutes of user inactivity.</p>
-                    </div>
-                    <button type="button" onClick={() => setAutoLogout(!autoLogout)} className="cursor-pointer">
-                      {autoLogout ? <ToggleRight className="w-8 h-8 text-[#57E389]" /> : <ToggleLeft className="w-8 h-8 text-secondaryText" />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Active Sessions Panel */}
-              <div className="bg-[#090909] border border-white/5 p-6 rounded-2xl space-y-6">
-                <div>
-                  <h3 className="text-base font-bold text-white flex items-center gap-2 font-mono uppercase tracking-wider">
-                    💻 Active Terminal Sessions
-                  </h3>
-                  <p className="text-xs text-secondaryText mt-1">
-                    Devices currently logged in to your NodeBeacon account.
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  {/* Session 1 */}
-                  <div className="flex items-center justify-between p-4 bg-[#101010] border border-white/5 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-[#57E389]/10 border border-[#57E389]/20 flex items-center justify-center">
-                        <Laptop className="w-4 h-4 text-[#57E389]" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-white font-mono">Chrome &bull; Windows 11</span>
-                          <span className="px-1.5 py-0.5 bg-[#57E389]/10 border border-[#57E389]/20 text-[8px] font-bold text-[#57E389] font-mono rounded">CURRENT</span>
-                        </div>
-                        <p className="text-[10px] text-secondaryText mt-0.5 font-mono">192.168.1.14 &bull; New York, US</p>
-                      </div>
-                    </div>
-                    <span className="text-[9px] text-[#57E389] font-bold font-mono tracking-wider">ACTIVE NOW</span>
-                  </div>
-
-                  {/* Session 2 */}
-                  <div className="flex items-center justify-between p-4 bg-[#101010] border border-white/5 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center">
-                        <Smartphone className="w-4 h-4 text-secondaryText" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-white font-mono">Firefox &bull; Android 14</span>
-                        </div>
-                        <p className="text-[10px] text-secondaryText mt-0.5 font-mono">172.56.21.99 &bull; California, US</p>
-                      </div>
-                    </div>
-                    <button 
-                      type="button" 
-                      onClick={() => alert("Session termination is configured for secondary devices.")}
-                      className="h-8 px-3 rounded-lg border border-white/5 hover:border-rose-500/20 text-[10px] font-bold font-mono text-secondaryText hover:text-rose-400 hover:bg-rose-500/5 transition-all flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      Terminate
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-            </motion.div>
-          )}
-
-          {activeSection === 'notifications' && (
-            <form onSubmit={handleSave} className="space-y-6">
-              <h3 className="text-xs font-bold text-white font-mono uppercase tracking-wider border-b border-white/5 pb-3">
-                Alarm Dispatcher channels
-              </h3>
-
-              <div className="space-y-4 pt-2">
-                {/* Email alarms toggle */}
-                <div className="flex items-center justify-between p-3 bg-white/[0.01] border border-white/5 rounded-xl">
-                  <div>
-                    <h4 className="text-xs font-bold text-white font-mono uppercase tracking-wider">Email Alarms</h4>
-                    <p className="text-[10px] text-secondaryText mt-0.5">Send alerts directly to the configured recipient email.</p>
-                  </div>
-                  <button 
-                    type="button"
-                    onClick={() => setEmailNotifs(!emailNotifs)}
-                    className="text-secondaryText hover:text-white cursor-pointer"
-                  >
-                    {emailNotifs ? (
-                      <ToggleRight className="w-7 h-7 text-accent" />
-                    ) : (
-                      <ToggleLeft className="w-7 h-7 text-secondaryText" />
-                    )}
-                  </button>
-                </div>
-
-                {/* Desktop notifications toggle */}
-                <div className="flex items-center justify-between p-3 bg-white/[0.01] border border-white/5 rounded-xl">
-                  <div>
-                    <h4 className="text-xs font-bold text-white font-mono uppercase tracking-wider">Desktop Notifications</h4>
-                    <p className="text-[10px] text-secondaryText mt-0.5">Deliver native browser-level popup warnings immediately.</p>
-                  </div>
-                  <button 
-                    type="button"
-                    onClick={() => setDesktopNotifs(!desktopNotifs)}
-                    className="text-secondaryText hover:text-white cursor-pointer"
-                  >
-                    {desktopNotifs ? (
-                      <ToggleRight className="w-7 h-7 text-accent" />
-                    ) : (
-                      <ToggleLeft className="w-7 h-7 text-secondaryText" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <h3 className="text-xs font-bold text-white font-mono uppercase tracking-wider border-b border-white/5 pb-3 pt-4">
-                Threshold Configurations
-              </h3>
-
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-secondaryText uppercase tracking-wider font-mono">Recipient Email</label>
-                  <input
-                    type="email"
-                    placeholder={email || "e.g. alerts@company.com"}
-                    value={recipientEmail}
-                    onChange={(e) => setRecipientEmail(e.target.value)}
-                    className="w-full h-10 bg-[#101010]/80 border border-white/5 rounded-xl px-4 text-xs text-white focus:outline-none focus:border-accent/40"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-secondaryText uppercase tracking-wider font-mono">CPU Threshold (%)</label>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      max="100"
-                      value={cpuThreshold}
-                      onChange={(e) => setCpuThreshold(e.target.value)}
-                      className="w-full h-10 bg-[#101010]/80 border border-white/5 rounded-xl px-4 text-xs text-white focus:outline-none focus:border-accent/40"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-secondaryText uppercase tracking-wider font-mono">Memory Threshold (%)</label>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      max="100"
-                      value={memoryThreshold}
-                      onChange={(e) => setMemoryThreshold(e.target.value)}
-                      className="w-full h-10 bg-[#101010]/80 border border-white/5 rounded-xl px-4 text-xs text-white focus:outline-none focus:border-accent/40"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-secondaryText uppercase tracking-wider font-mono">Disk Threshold (%)</label>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      max="100"
-                      value={diskThreshold}
-                      onChange={(e) => setDiskThreshold(e.target.value)}
-                      className="w-full h-10 bg-[#101010]/80 border border-white/5 rounded-xl px-4 text-xs text-white focus:outline-none focus:border-accent/40"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-secondaryText uppercase tracking-wider font-mono">Heartbeat Timeout (s)</label>
-                    <input
-                      type="number"
-                      required
-                      min="10"
-                      value={heartbeatTimeout}
-                      onChange={(e) => setHeartbeatTimeout(e.target.value)}
-                      className="w-full h-10 bg-[#101010]/80 border border-white/5 rounded-xl px-4 text-xs text-white focus:outline-none focus:border-accent/40"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex-1 h-10 bg-accent text-[#070707] font-bold rounded-xl text-xs uppercase tracking-wider font-mono flex items-center justify-center gap-1.5 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer shadow-[0_0_20px_rgba(87,227,137,0.15)] disabled:opacity-50"
-                >
-                  {saving ? <span>Saving configurations...</span> : saved ? <span>Saved</span> : <span>Save Configurations</span>}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmailNotifs(true);
-                    setDesktopNotifs(true);
-                    setRecipientEmail('');
-                    setCpuThreshold(90);
-                    setMemoryThreshold(90);
-                    setDiskThreshold(95);
-                    setHeartbeatTimeout(60);
-                  }}
-                  className="px-5 h-10 bg-white/5 border border-white/5 hover:border-white/10 text-white font-bold rounded-xl text-xs uppercase tracking-wider font-mono transition-all cursor-pointer"
-                >
-                  Reset
-                </button>
-              </div>
-            </form>
-          )}
-
-          {activeSection === 'api' && (
-            <div className="space-y-6">
-              <h3 className="text-xs font-bold text-white font-mono uppercase tracking-wider border-b border-white/5 pb-3">
-                Developer API Credentials
-              </h3>
-
-              <div className="space-y-4">
-                <p className="text-xs text-secondaryText leading-relaxed">
-                  Use your user access credentials to query server statuses and collect historical metrics logs programmatically.
-                </p>
-
-                <div className="p-4 bg-[#101010] border border-white/5 rounded-xl flex items-center justify-between">
-                  <div className="font-mono text-xs select-all text-white">
-                    nb_usr_act_7c8d9e2b1a0f9e8d...
-                  </div>
-                  <button 
-                    onClick={() => alert("User API key copied to clipboard")}
-                    className="text-[10px] text-accent font-bold uppercase tracking-wider font-mono hover:underline cursor-pointer"
-                  >
-                    copy key
-                  </button>
-                </div>
+                <p className="mt-2 break-all text-[11px] text-secondaryText">Permission applies to this site: {window.location.origin}</p>
+                {desktopPermission === 'denied' && <p className="mt-2 text-xs leading-5 text-danger">Browser notification permission is blocked. Enable notifications for this site in your browser settings.</p>}
+                {desktopPermission === 'unsupported' && <p className="mt-2 text-xs leading-5 text-secondaryText">This browser does not support native desktop notifications.</p>}
+                {desktopMessage.message && <p className={`mt-2 flex items-start gap-1.5 text-xs leading-5 ${desktopMessage.type === 'error' ? 'text-danger' : 'text-secondaryText'}`} role={desktopMessage.type === 'error' ? 'alert' : 'status'}><AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />{desktopMessage.message}</p>}
+                <button type="button" onClick={handleTestDesktopNotification} disabled={testingDesktop || desktopBusy} className="mt-3 inline-flex h-9 items-center justify-center rounded-lg border border-foreground/10 px-3 text-xs font-semibold text-foreground transition hover:border-accent/40 hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-60">{testingDesktop ? 'Testing…' : 'Send Test Desktop Notification'}</button>
+                <details className="mt-3 rounded-lg border border-foreground/10 bg-background/50 px-3 py-2">
+                  <summary className="cursor-pointer text-xs font-semibold text-secondaryText">Browser notification diagnostics</summary>
+                  <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[11px] leading-4 text-secondaryText">
+                    <dt>Notification API</dt><dd>{desktopDiagnostics.apiAvailable ? 'Available' : 'Unavailable'}</dd>
+                    <dt>Permission</dt><dd>{desktopDiagnostics.permission}</dd>
+                    <dt>Origin</dt><dd className="break-all">{desktopDiagnostics.origin}</dd>
+                    <dt>Secure context</dt><dd>{desktopDiagnostics.secureContext ? 'Yes' : 'No'}</dd>
+                    <dt>Document visibility</dt><dd>{desktopDiagnostics.visibilityState}</dd>
+                    <dt>Maximum actions</dt><dd>{desktopDiagnostics.maxActions ?? 'Not reported'}</dd>
+                    <dt>Service worker</dt><dd>{desktopDiagnostics.serviceWorkerStatus}</dd>
+                    <dt>Controls this page</dt><dd>{desktopDiagnostics.serviceWorkerController ? 'Yes' : 'No'}</dd>
+                  </dl>
+                  <p className="mt-2 break-all text-[10px] leading-4 text-secondaryText">{desktopDiagnostics.userAgent}</p>
+                </details>
+                <p className="mt-3 text-[11px] leading-4 text-secondaryText">If the browser accepts the request but no Windows toast appears, check Windows Settings → System → Notifications → Google Chrome, and Chrome Settings → Site settings → Notifications → Allowed → localhost.</p>
               </div>
             </div>
-          )}
+            <div className="border-t border-foreground/10 pt-5">
+              <h3 className="mb-4 font-mono text-xs font-bold uppercase tracking-[0.12em] text-foreground">Alert thresholds</h3>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <NumberSetting label="CPU threshold (%)" value={cpuThreshold} onChange={setCpuThreshold} min="0" max="100" />
+                <NumberSetting label="Memory threshold (%)" value={memoryThreshold} onChange={setMemoryThreshold} min="0" max="100" />
+                <NumberSetting label="Disk threshold (%)" value={diskThreshold} onChange={setDiskThreshold} min="0" max="100" />
+                <NumberSetting label="Heartbeat timeout (seconds)" value={heartbeatTimeout} onChange={setHeartbeatTimeout} min="10" />
+              </div>
+            </div>
+            <div className="flex flex-col-reverse gap-3 border-t border-foreground/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-secondaryText">Changes are confirmed only after the server accepts them.</p>
+              <button type="submit" disabled={saving} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-accent px-5 text-xs font-semibold text-[#072111] transition hover:brightness-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-card disabled:cursor-wait disabled:opacity-60">{saved ? <><Check className="h-4 w-4" />Changes saved</> : saving ? 'Saving…' : 'Save alert settings'}</button>
+            </div>
+          </form>
+        </section>
 
-          {activeSection === 'organization' && <OrgSettingsForm />}
-
-        </div>
+        {(user?.role === 'ORGANIZATION_ADMIN' || user?.role === 'MEMBER') && (
+          <section className={sectionClass} aria-labelledby="organization-settings-heading">
+            <SectionHeading id="organization-settings-heading" icon={Building2} title="Organization" description="Organization details and recipients available to your account." />
+            <OrgSettingsForm />
+          </section>
+        )}
       </div>
+    </main>
+  );
+}
+
+function TelegramAlertStatus({ telegram, onManage }) {
+  const connected = telegram.connected && telegram.botInfoAvailable && !telegram.error;
+  const status = telegram.loading ? 'Checking status' : telegram.error ? 'Connection error' : connected ? 'Connected' : 'Telegram is not connected';
+  return (
+    <div className="rounded-xl border border-foreground/10 bg-surface/60 p-3.5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-2.5">
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-accent/20 bg-accent/10 text-accent"><Bot className="h-4 w-4" aria-hidden="true" /></span>
+          <div><h3 className="text-sm font-semibold text-foreground">Telegram connection</h3><p className="mt-1 text-xs leading-5 text-secondaryText">View the status of your paired NodeBeacon Telegram bot.</p></div>
+        </div>
+        <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-1 text-[10px] font-semibold ${connected ? 'border-accent/25 bg-accent/10 text-accent' : telegram.error ? 'border-danger/25 bg-danger/10 text-danger' : 'border-foreground/15 bg-foreground/5 text-secondaryText'}`} role="status">
+          {telegram.loading ? <LoaderCircle className="h-3 w-3 animate-spin" aria-hidden="true" /> : <span className={`h-1.5 w-1.5 rounded-full ${connected ? 'bg-accent' : telegram.error ? 'bg-danger' : 'bg-current'}`} aria-hidden="true" />}
+          {status}
+        </span>
+      </div>
+      {connected && <div className="mt-3 rounded-lg border border-foreground/10 bg-foreground/[0.02] px-3 py-2.5">
+        <p className="text-xs font-semibold text-foreground">{telegram.botName || 'NodeBeacon Alerts'}</p>
+        {telegram.botUsername && <p className="mt-0.5 font-mono text-[11px] text-secondaryText">@{telegram.botUsername}</p>}
+      </div>}
+      {!telegram.loading && !connected && <p className="mt-2 text-xs text-secondaryText">Connect Telegram from Integrations to manage this channel.</p>}
+      <button type="button" onClick={onManage} className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-accent transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+        {connected ? 'Manage Telegram' : 'Open Integrations'}<ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+      </button>
     </div>
   );
+}
+
+function PreferenceToggle({ title, checked, onChange, disabled = false }) {
+  return (
+    <button type="button" role="switch" aria-checked={checked} aria-label={title} onClick={onChange} disabled={disabled} className={`relative h-5 w-9 shrink-0 rounded-full transition-colors duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-card disabled:cursor-wait disabled:opacity-60 ${checked ? 'bg-accent' : 'bg-foreground/20'}`}>
+        {disabled && <LoaderCircle className="absolute inset-0 m-auto h-3 w-3 animate-spin text-white" aria-hidden="true" />}
+        {!disabled && <span className={`pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200 ease-out ${checked ? 'translate-x-4' : 'translate-x-0'}`} />}
+      </button>
+    );
+}
+
+function NumberSetting({ label, value, onChange, min, max }) {
+  return <label className="block"><span className={labelClass}>{label}</span><input type="number" required min={min} max={max} value={value} onChange={(e) => onChange(e.target.value)} className={`${inputClass} nodebeacon-number-input`} /></label>;
 }
 
 function OrgSettingsForm() {
@@ -818,7 +474,7 @@ function OrgSettingsForm() {
         setAlertEmail(data.alert_email || '');
         setAlertRecipients(data.alert_recipients || '');
       } catch (err) {
-        console.error(err);
+        console.error('Failed to load organization settings', err);
       }
     };
     fetchOrg();
@@ -830,77 +486,26 @@ function OrgSettingsForm() {
     setSaved(false);
     try {
       const { updateOrgSettings } = await import('../api/auth');
-      await updateOrgSettings({
-        organization_name: orgName,
-        alert_email: alertEmail,
-        alert_recipients: alertRecipients,
-      });
+      await updateOrgSettings({ organization_name: orgName, alert_email: alertEmail, alert_recipients: alertRecipients });
       setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      window.setTimeout(() => setSaved(false), 2500);
     } catch (err) {
-      console.error(err);
-      alert("Failed to update organization settings.");
+      console.error('Failed to update organization settings', err);
+      alert('Failed to update organization settings. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const isAdmin = user?.role === 'ORGANIZATION_ADMIN';
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <h3 className="text-xs font-bold text-white font-mono uppercase tracking-wider border-b border-white/5 pb-3">
-        Organization Configuration
-      </h3>
-
-      <div className="space-y-4">
-        <div className="space-y-1.5">
-          <label className="text-[10px] font-bold text-secondaryText uppercase tracking-wider font-mono">Organization Name</label>
-          <input
-            type="text"
-            required
-            disabled={!isAdmin}
-            value={orgName}
-            onChange={(e) => setOrgName(e.target.value)}
-            className="w-full h-10 bg-[#101010]/80 border border-white/5 rounded-xl px-4 text-xs text-white focus:outline-none focus:border-accent/40"
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-[10px] font-bold text-secondaryText uppercase tracking-wider font-mono">Alert Email</label>
-          <input
-            type="email"
-            required
-            disabled={!isAdmin}
-            value={alertEmail}
-            onChange={(e) => setAlertEmail(e.target.value)}
-            className="w-full h-10 bg-[#101010]/80 border border-white/5 rounded-xl px-4 text-xs text-white focus:outline-none focus:border-accent/40"
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-[10px] font-bold text-secondaryText uppercase tracking-wider font-mono">
-            Alert Recipients (Comma Separated)
-          </label>
-          <textarea
-            disabled={!isAdmin}
-            value={alertRecipients}
-            onChange={(e) => setAlertRecipients(e.target.value)}
-            placeholder="admin@company.com, tech@company.com"
-            className="w-full h-20 bg-[#101010]/80 border border-white/5 rounded-xl p-4 text-xs text-white focus:outline-none focus:border-accent/40 font-mono"
-          />
-        </div>
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <label className="block"><span className={labelClass}>Organization name</span><input type="text" required disabled={!isAdmin} value={orgName} onChange={(e) => setOrgName(e.target.value)} className={inputClass} /></label>
+        <label className="block"><span className={labelClass}>Alert email</span><input type="email" required disabled={!isAdmin} value={alertEmail} onChange={(e) => setAlertEmail(e.target.value)} className={inputClass} /></label>
+        <label className="block sm:col-span-2"><span className={labelClass}>Alert recipients (comma separated)</span><textarea disabled={!isAdmin} value={alertRecipients} onChange={(e) => setAlertRecipients(e.target.value)} placeholder="admin@example.com, ops@example.com" className={`${inputClass} h-24 py-3 font-mono`} /></label>
       </div>
-
-      {isAdmin && (
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full h-10 bg-accent text-[#070707] font-bold rounded-xl text-xs uppercase tracking-wider font-mono flex items-center justify-center gap-1.5 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer shadow-[0_0_20px_rgba(87,227,137,0.15)] disabled:opacity-50"
-        >
-          {loading ? 'Saving...' : saved ? 'Saved' : 'Save Changes'}
-        </button>
-      )}
+      {isAdmin && <div className="flex justify-end border-t border-foreground/10 pt-4"><button type="submit" disabled={loading} className="h-10 rounded-xl bg-accent px-5 text-xs font-semibold text-[#072111] transition hover:brightness-105 disabled:opacity-60">{loading ? 'Saving…' : saved ? 'Changes saved' : 'Save organization settings'}</button></div>}
     </form>
   );
 }

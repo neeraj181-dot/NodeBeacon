@@ -35,6 +35,9 @@ class Metric(models.Model):
 
     class Meta:
         ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['server', '-timestamp'], name='metric_server_time_idx'),
+        ]
 
     def __str__(self):
         return f"{self.server.name} - CPU: {self.cpu_usage}% - {self.timestamp}"

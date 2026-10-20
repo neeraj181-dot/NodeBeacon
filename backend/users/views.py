@@ -70,42 +70,137 @@ class TestEmailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        from alerts.services import send_alert_email
-        from servers.models import Server
-        from collections import namedtuple
-        
         user = request.user
-        # Resolve any existing server or fake one
-        server = Server.objects.filter(owner=user).first()
-        if not server:
-            # Create a mock server instance for demonstration (not saved to database)
-            server = Server(
-                name="TUFF (Test)",
-                hostname="tuff-laptop",
-                operating_system="Windows 11 Pro",
-                ip_address="192.168.1.100"
-            )
-            
-        MockMetric = namedtuple('Metric', ['cpu_usage', 'memory_usage', 'disk_usage'])
-        metric = MockMetric(cpu_usage=92.5, memory_usage=88.1, disk_usage=45.2)
+        from django.conf import settings
+        from django.core.mail import send_mail
+        from users.unlock_alerts import email_delivery_is_configured
 
-        try:
-            send_alert_email(
-                user=user,
-                server=server,
-                title="High CPU Usage (Test Alert)",
-                description="This is a test notification confirming your NodeBeacon SMTP settings are correctly integrated.",
-                metric=metric
-            )
+        recipient = (user.recipient_email or user.email or '').strip()
+        if not recipient:
             return Response(
-                {"success": True, "message": "Test email sent successfully."},
+                {"success": False, "message": "Set a recipient email in Settings before sending a test."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if not email_delivery_is_configured():
+            return Response(
+                {"success": False, "message": "SMTP is not configured. Check the backend email settings and restart Django."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        try:
+            sent = send_mail(
+                subject="NodeBeacon test email",
+                message="This is a test email from NodeBeacon. If you received it, backend SMTP delivery is working.",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[recipient],
+                fail_silently=False,
+            )
+            if sent != 1:
+                raise RuntimeError('Email backend did not accept the test message.')
+            return Response(
+                {
+                    "success": True,
+                    "recipient": recipient,
+                    "message": "The SMTP server accepted the test email; final inbox delivery cannot be confirmed. Check Inbox and Spam.",
+                },
                 status=status.HTTP_200_OK
             )
-        except Exception as e:
+        except Exception as exc:
+            logger.warning('NodeBeacon test email failed (%s).', type(exc).__name__)
             return Response(
-                {"success": False, "message": f"SMTP Dispatch Error: {str(e)}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"success": False, "message": "Email delivery failed. Check the SMTP settings and recipient address, then try again."},
+                status=status.HTTP_502_BAD_GATEWAY
             )
+
+
+class TelegramSettingsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from users.telegram_service import (
+            TelegramServiceError, bot_information, development_test_chat_id,
+            telegram_is_configured,
+        )
+        configured = telegram_is_configured()
+        bot_info = None
+        if configured:
+            try:
+                bot_info = bot_information()
+            except TelegramServiceError:
+                # Keep account settings available if Telegram is temporarily unreachable.
+                bot_info = None
+        return Response({
+            'configured': configured,
+            'connected': bool(request.user.telegram_chat_id),
+            'development_test_available': bool(configured and development_test_chat_id()),
+            'notify_on_laptop_unlock_telegram': request.user.notify_on_laptop_unlock_telegram,
+            'bot_info_available': bot_info is not None,
+            'bot_name': bot_info['bot_name'] if bot_info else '',
+            'bot_username': bot_info['bot_username'] if bot_info else '',
+            'bot_url': bot_info['bot_url'] if bot_info else '',
+        })
+
+    def patch(self, request):
+        from users.telegram_service import telegram_is_configured
+        if request.data.get('disconnect') is True:
+            request.user.telegram_chat_id = None
+            request.user.notify_on_laptop_unlock_telegram = False
+            request.user.save(update_fields=['telegram_chat_id', 'notify_on_laptop_unlock_telegram'])
+            return self.get(request)
+        enabled = request.data.get('notify_on_laptop_unlock_telegram')
+        if not isinstance(enabled, bool):
+            return Response({'message': 'Provide a boolean notification setting.'}, status=status.HTTP_400_BAD_REQUEST)
+        if enabled and not request.user.telegram_chat_id:
+            return Response({'message': 'Connect and verify your Telegram chat before enabling unlock alerts.'}, status=status.HTTP_400_BAD_REQUEST)
+        if enabled and not telegram_is_configured():
+            return Response({'message': 'Telegram is not configured on the NodeBeacon backend.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        request.user.notify_on_laptop_unlock_telegram = enabled
+        request.user.save(update_fields=['notify_on_laptop_unlock_telegram'])
+        return self.get(request)
+
+
+class TelegramConnectStartView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        from users.telegram_service import TelegramServiceError, start_pairing
+        try:
+            return Response(start_pairing(request.user))
+        except TelegramServiceError as exc:
+            return Response({'message': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+
+class TelegramConnectVerifyView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        from users.telegram_service import TelegramServiceError, verify_pairing
+        try:
+            return Response(verify_pairing(request.user))
+        except TelegramServiceError as exc:
+            return Response({'message': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TelegramTestView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        from users.telegram_service import (
+            TelegramServiceError, development_test_chat_id,
+            send_telegram_message, telegram_is_configured,
+        )
+        user = request.user
+        logger.info('[Telegram] Notification triggered (authenticated test).')
+        configured = telegram_is_configured()
+        if not configured:
+            return Response({'message': 'Telegram is not configured on the NodeBeacon backend.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        chat_id = user.telegram_chat_id or development_test_chat_id()
+        if not chat_id:
+            return Response({'message': 'Connect Telegram before sending a test message.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            send_telegram_message(chat_id, 'NodeBeacon Telegram test notification')
+            return Response({'success': True, 'message': 'Telegram accepted the test message. Check your Telegram chat.'})
+        except TelegramServiceError as exc:
+            return Response({'message': str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
 
 
 class ChangePasswordView(APIView):

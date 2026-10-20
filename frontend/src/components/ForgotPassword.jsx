@@ -1,14 +1,19 @@
 import React, { useState } from 'react';
+// React Router - Link and useNavigate for recovery navigation
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, ArrowLeft, ArrowRight, ShieldCheck } from 'lucide-react';
 import Logo from './Logo';
 import WaveBackground from './WaveBackground';
 
 export default function ForgotPassword({ onNavigate }) {
+  // React Router - useNavigate Hook
+  const navigate = useNavigate();
+
+  // React Hook - useState (Tracks email input, dispatch state, focus, and error messages)
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
-
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -67,13 +72,15 @@ export default function ForgotPassword({ onNavigate }) {
               <p className="text-xs text-accent font-mono uppercase tracking-wider font-bold">Recovery link dispatched</p>
               <p className="text-[11px] text-secondaryText mt-1 leading-relaxed">Check your inbox at <strong>{email}</strong> for instructions to reset your password.</p>
             </div>
-            <button 
-              onClick={() => onNavigate('login')}
+            {/* React Router - Declarative Link returning to Login */}
+            <Link 
+              to="/login"
+              onClick={() => onNavigate?.('login')}
               className="w-full h-11 bg-white/5 border border-white/5 hover:border-white/10 hover:bg-white/10 rounded-xl text-xs font-bold uppercase font-mono tracking-wider text-white transition-all cursor-pointer flex items-center justify-center gap-1.5"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Return to Login</span>
-            </button>
+            </Link>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -103,13 +110,14 @@ export default function ForgotPassword({ onNavigate }) {
             </button>
 
             <div className="text-center pt-2">
-              <button 
-                type="button"
-                onClick={() => onNavigate('login')}
+              {/* React Router - Declarative Link to login */}
+              <Link 
+                to="/login"
+                onClick={() => onNavigate?.('login')}
                 className="text-xs text-secondaryText hover:text-white transition-colors cursor-pointer font-sans"
               >
                 Go back to login
-              </button>
+              </Link>
             </div>
           </form>
         )}

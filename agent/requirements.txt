@@ -1,2 +1,4 @@
 requests
 psutil
+pywin32>=306
+pyinstaller>=6.0

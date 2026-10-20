@@ -5,7 +5,7 @@ from servers.serializers import ServerSerializer
 from servers.permissions import IsOwner
 
 class ServerViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwner]
     serializer_class = ServerSerializer
 
     def get_queryset(self):

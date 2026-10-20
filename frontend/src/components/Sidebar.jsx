@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+// React Router - Declarative Navigation Link
+import { Link } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Server, 
@@ -10,8 +12,7 @@ import {
   Settings,
   User,
   LogOut,
-  Wifi,
-  Database
+  Wifi
 } from 'lucide-react';
 import { Users } from 'lucide-react';
 import Logo from './Logo';
@@ -19,32 +20,40 @@ import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
 
 export default function Sidebar({ currentTab, setCurrentTab }) {
+  // React Hook - useContext (Access user role and logout handler from AuthContext)
   const { user, logout } = useAuth();
   
-  const baseItems = [
-    { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard },
-    { id: 'servers', name: 'Servers', icon: Server },
-    { id: 'metrics', name: 'Metrics', icon: Activity },
-    { id: 'alerts', name: 'Alerts', icon: ShieldAlert },
-    { id: 'logs', name: 'Logs', icon: Terminal },
-    { id: 'reports', name: 'Reports', icon: FileText },
-    { id: 'integrations', name: 'Integrations', icon: Blocks },
-  ];
+  // React Hook - useMemo (Memoizes navigation items based on user permissions)
+  const menuItems = useMemo(() => {
+    const baseItems = [
+      { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard },
+      { id: 'servers', name: 'Servers', icon: Server },
+      { id: 'metrics', name: 'Metrics', icon: Activity },
+      { id: 'alerts', name: 'Alerts', icon: ShieldAlert },
+      { id: 'logs', name: 'Logs', icon: Terminal },
+      { id: 'reports', name: 'Reports', icon: FileText },
+      { id: 'integrations', name: 'Integrations', icon: Blocks },
+    ];
 
-  if (user?.role === 'ORGANIZATION_ADMIN' || user?.role === 'MEMBER') {
-    baseItems.push({ id: 'members', name: 'Team Members', icon: Users });
-  }
+    if (user?.role === 'ORGANIZATION_ADMIN' || user?.role === 'MEMBER') {
+      baseItems.push({ id: 'members', name: 'Team Members', icon: Users });
+    }
 
-  baseItems.push({ id: 'settings', name: 'Settings', icon: Settings });
-  const menuItems = baseItems;
+    baseItems.push({ id: 'settings', name: 'Settings', icon: Settings });
+    return baseItems;
+  }, [user?.role]);
 
   return (
     <aside className="w-[280px] h-screen bg-[#101010] border-r border-white/5 flex flex-col justify-between shrink-0 select-none p-6 pb-4 z-10">
       {/* Branding & Navigation Group */}
       <div className="space-y-8">
         
-        {/* Branding header */}
-        <div className="flex items-center gap-4">
+        {/* React Router - Declarative Link navigating to home/dashboard */}
+        <Link 
+          to="/" 
+          onClick={() => setCurrentTab('dashboard')}
+          className="flex items-center gap-4 cursor-pointer focus:outline-none"
+        >
           <Logo size={42} showGlow={true} />
           <div className="flex flex-col justify-center">
             <span className="font-bold text-white tracking-[0.5px] text-[18px] leading-tight font-sans">
@@ -54,7 +63,7 @@ export default function Sidebar({ currentTab, setCurrentTab }) {
               ENTERPRISE DEPLOY
             </span>
           </div>
-        </div>
+        </Link>
 
         {/* Navigation Links */}
         <nav className="space-y-1 relative">

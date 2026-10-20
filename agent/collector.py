@@ -46,6 +46,17 @@ def get_hostname():
     return socket.gethostname()
 
 def get_os():
+    # Windows reports the NT version as 10.0 for compatibility, including on
+    # Windows 11. The build number distinguishes Windows 11 (22000+).
+    if sys.platform == 'win32':
+        try:
+            version = sys.getwindowsversion()
+            if version.major == 10 and version.build >= 22000:
+                return 'Windows 11'
+            if version.major == 10:
+                return 'Windows 10'
+        except (AttributeError, OSError):
+            pass
     return f"{platform.system()} {platform.release()}"
 
 def collect_all():

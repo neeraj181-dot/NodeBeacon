@@ -1,20 +1,55 @@
 import React, { useState } from 'react';
+// React Router - Link component and useNavigate hook for page navigation
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, Activity, Bell, ShieldCheck, ArrowRight } from 'lucide-react';
 import Logo from './Logo';
 import WaveBackground from './WaveBackground';
 import { useAuth } from '../contexts/AuthContext';
+import { getGoogleAuthUrl } from '../api/auth';
 
-export default function Login({ onLogin, onNavigate }) {
+export default function Login({ onLogin, onNavigate, initialError = '' }) {
+  // React Router - useNavigate Hook
+  const navigate = useNavigate();
+
+  // React Hook - useState (Manages input values, loading states, and validation errors)
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
-  const [localError, setLocalError] = useState('');
+  const [localError, setLocalError] = useState(initialError || '');
   const [submitting, setSubmitting] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  // React Hook - useContext (Access user authentication state from AuthContext)
   const { login } = useAuth();
+
+  // React Hook - useEffect (Synchronizes initial error prop with local state)
+  React.useEffect(() => {
+    if (initialError) {
+      setLocalError(initialError);
+    }
+  }, [initialError]);
+
+  const handleGoogleLogin = async () => {
+    setLocalError('');
+    setGoogleLoading(true);
+    try {
+      const redirectUri = `${window.location.origin}/auth/callback`;
+      const data = await getGoogleAuthUrl(redirectUri);
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('Google authorization URL could not be generated.');
+      }
+    } catch (err) {
+      const msg = err.response?.data?.detail || err.message || 'Failed to start Google sign-in.';
+      setLocalError(msg);
+      setGoogleLoading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,7 +58,9 @@ export default function Login({ onLogin, onNavigate }) {
     try {
       // Since username = email, we pass email to the login method
       await login(email.trim(), password);
-      onLogin();
+      onLogin?.();
+      // React Router - Programmatic Navigation to Dashboard on successful login
+      navigate('/');
     } catch (err) {
       setLocalError(err.message || 'Login failed. Please check credentials.');
     } finally {
@@ -235,13 +272,14 @@ export default function Login({ onLogin, onNavigate }) {
                   />
                   <span>Remember me</span>
                 </label>
-                <button
-                  type="button"
-                  onClick={() => onNavigate('forgot-password')}
+                {/* React Router - Declarative Link to password recovery */}
+                <Link
+                  to="/forgot-password"
+                  onClick={() => onNavigate?.('forgot-password')}
                   className="text-accent hover:underline font-semibold"
                 >
                   Forgot password?
-                </button>
+                </Link>
               </div>
 
               {/* Submit Button */}
@@ -266,26 +304,43 @@ export default function Login({ onLogin, onNavigate }) {
 
             {/* Social Oauth Buttons */}
             <div className="w-full">
-              <button className="w-full h-10 bg-[#111111]/50 border border-white/5 hover:border-white/10 hover:bg-[#111111] text-xs font-semibold rounded-xl text-white flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer">
-                <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
-                </svg>
-                <span>Google</span>
+              <button
+                type="button"
+                id="google-signin-btn"
+                disabled={submitting || googleLoading}
+                onClick={handleGoogleLogin}
+                className="w-full h-10 bg-[#111111]/50 border border-white/5 hover:border-white/10 hover:bg-[#111111] text-xs font-semibold rounded-xl text-white flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer disabled:opacity-50"
+              >
+                {googleLoading ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                    <span>Connecting...</span>
+                  </span>
+                ) : (
+                  <>
+                    <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+                    </svg>
+                    <span>Google</span>
+                  </>
+                )}
               </button>
             </div>
 
             {/* Bottom Create Account Link */}
             <div className="text-center text-xs text-secondaryText pt-2">
               Don't have an account?{' '}
-              <button
-                onClick={() => onNavigate('register')}
+              {/* React Router - Declarative Link to register view */}
+              <Link
+                to="/register"
+                onClick={() => onNavigate?.('register')}
                 className="text-accent hover:underline font-semibold"
               >
                 Create account
-              </button>
+              </Link>
             </div>
 
           </motion.div>

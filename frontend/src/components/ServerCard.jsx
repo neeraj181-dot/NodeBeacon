@@ -13,7 +13,7 @@ const formatLastSeen = (dateStr) => {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
-export default function ServerCard({ server, metrics, onViewServer, onEdit, onDelete }) {
+export default function ServerCard({ server, metrics, onViewServer, onEdit, onDelete, onConfigure }) {
   const [showMenu, setShowMenu] = useState(false);
 
   const toggleMenu = () => setShowMenu(!showMenu);
@@ -137,6 +137,11 @@ export default function ServerCard({ server, metrics, onViewServer, onEdit, onDe
       </section>
 
       {/* Compact Action Footer */}
+      <div className="mt-3 text-xs font-mono text-secondaryText break-all">
+        Agent: {server.agent_connection_status || 'Not installed'}
+        {server.device_id && <div>Device: {server.device_id}<br />Backend: {server.agent_server_url}{server.agent_server_port ? `:${server.agent_server_port}` : ''}</div>}
+        <button onClick={() => onConfigure?.(server)} className="text-accent mt-2">Configure / Install agent</button>
+      </div>
       <footer className="mt-3.5 pt-3 border-t border-white/5 flex gap-2">
         <button
           onClick={() => onViewServer?.(server.id)}

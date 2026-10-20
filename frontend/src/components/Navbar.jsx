@@ -1,14 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Bell, Plus, Terminal, User, Laptop } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Search, Bell, Plus } from 'lucide-react';
 import Logo from './Logo';
 import { useAlerts } from '../contexts/AlertContext';
 import { useAuth } from '../contexts/AuthContext';
+import ThemeToggle from './ThemeToggle';
+import { countUnreadAlerts } from '../contexts/alertReadState';
 
-export default function Navbar({ onAddServerClick }) {
+export default function Navbar({ onAddServerClick, onNotificationsClick, isNotificationsActive = false }) {
+  // React Hook - useContext (Reads authenticated user profile)
   const { user } = useAuth();
+
+  // React Hook - useState (Tracks search input focus and placeholder animation)
   const [searchFocused, setSearchFocused] = useState(false);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
-  const { alerts } = useAlerts();
+
+  // React Hook - useContext (Subscribes to system alerts and unread state)
+  const { alerts, readAlertIds, markAlertsRead } = useAlerts();
 
   const placeholders = [
     "Search resource metrics...",
@@ -17,16 +24,23 @@ export default function Navbar({ onAddServerClick }) {
     "Search incident alerts...",
   ];
 
-  // Rotate search placeholder for modern animated feel
+  // React Hook - useEffect (Rotates search input placeholder periodically)
   useEffect(() => {
     const timer = setInterval(() => {
       setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
     }, 4500);
     return () => clearInterval(timer);
-  }, []);
+  }, [placeholders.length]);
 
-  const activeAlerts = alerts.filter(a => a.status === 'Active');
+  // React Hook - useMemo (Caches filtered alerts and count to avoid unnecessary recomputations)
+  const activeAlerts = useMemo(() => alerts.filter(a => a.status === 'Active'), [alerts]);
   const activeAlertsCount = activeAlerts.length;
+  const unreadAlertsCount = useMemo(() => countUnreadAlerts(alerts, readAlertIds), [alerts, readAlertIds]);
+
+  const handleNotificationsClick = () => {
+    markAlertsRead(alerts.map(alert => alert.id));
+    onNotificationsClick?.();
+  };
 
   return (
     <header className="h-16 border-b border-white/5 px-8 flex items-center justify-between bg-[#050505] shrink-0 select-none z-20">
@@ -61,6 +75,7 @@ export default function Navbar({ onAddServerClick }) {
 
       {/* Right Side Actions */}
       <div className="flex items-center gap-4">
+        <ThemeToggle />
         {/* Account Badge */}
         {user?.role === 'ORGANIZATION_ADMIN' || user?.role === 'MEMBER' ? (
           <span className="px-2.5 py-1 bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[9px] font-bold font-mono uppercase tracking-wider rounded-lg shadow-[0_0_10px_rgba(139,92,246,0.05)]">
@@ -102,12 +117,21 @@ export default function Navbar({ onAddServerClick }) {
 
         {/* Notifications Bell */}
         <div className="relative">
-          <button className="p-2.5 text-secondaryText hover:text-white hover:bg-white/5 border border-white/5 hover:border-white/10 rounded-xl transition-all duration-150 cursor-pointer">
+          <button
+            type="button"
+            onClick={handleNotificationsClick}
+            title="Open alerts"
+            aria-label={unreadAlertsCount > 0
+              ? `Open alerts, ${unreadAlertsCount} unread ${unreadAlertsCount === 1 ? 'alert' : 'alerts'}`
+              : 'Open alerts'}
+            aria-current={isNotificationsActive ? 'page' : undefined}
+            className={`p-2.5 text-secondaryText hover:text-white hover:bg-white/5 border border-white/5 hover:border-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-xl transition-all duration-150 cursor-pointer ${isNotificationsActive ? 'bg-white/5 text-white border-white/10' : ''}`}
+          >
             <Bell className="w-4.5 h-4.5" />
           </button>
-          {activeAlertsCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-danger text-white text-[9px] font-bold flex items-center justify-center border border-[#050505] animate-neon-pulse font-mono">
-              {activeAlertsCount}
+          {unreadAlertsCount > 0 && (
+            <span aria-hidden="true" className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-danger text-white text-[9px] font-bold flex items-center justify-center border border-[#050505] animate-neon-pulse font-mono">
+              {unreadAlertsCount}
             </span>
           )}
         </div>

@@ -193,13 +193,13 @@ export default function ReportsTab() {
                         <stop offset="95%" stopColor="#57E389" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.02)" vertical={false} />
-                    <XAxis dataKey="day" stroke="rgba(255,255,255,0.3)" fontSize={10} axisLine={false} tickLine={false} />
-                    <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} axisLine={false} tickLine={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
+                    <XAxis dataKey="day" stroke="var(--chart-label)" fontSize={10} axisLine={false} tickLine={false} />
+                    <YAxis stroke="var(--chart-label)" fontSize={10} axisLine={false} tickLine={false} />
                     <Tooltip 
-                      contentStyle={{ backgroundColor: '#101010', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px' }} 
-                      labelStyle={{ color: '#8A8A8A', fontFamily: 'monospace', fontSize: '10px' }}
-                      itemStyle={{ fontSize: '11px', color: '#fff' }}
+                      contentStyle={{ backgroundColor: 'var(--chart-tooltip)', color: 'var(--color-foreground)', border: '1px solid var(--chart-grid)', borderRadius: '12px' }}
+                      labelStyle={{ color: 'var(--chart-label)', fontFamily: 'monospace', fontSize: '10px' }}
+                      itemStyle={{ fontSize: '11px', color: 'var(--color-foreground)' }}
                     />
                     <Area type="monotone" dataKey="CPU" stroke="#57E389" strokeWidth={1.5} fillOpacity={1} fill="url(#reportCpu)" />
                   </AreaChart>

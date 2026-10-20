@@ -3,6 +3,7 @@ import { useAlerts } from '../contexts/AlertContext';
 import { useServers } from '../contexts/ServerContext';
 import { ShieldAlert, CheckCircle, Clock, X, Search, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { formatAlertDuration } from './alertDuration';
 
 export default function AlertsTab() {
   const { alerts, loading, filters, setFilters, triggerResolve } = useAlerts();
@@ -173,9 +174,10 @@ export default function AlertsTab() {
                   <h4 className="text-xs font-bold text-white uppercase font-mono tracking-wide pt-0.5">{alert.title}</h4>
                   <p className="text-xs text-secondaryText leading-relaxed max-w-2xl">{alert.description}</p>
                   
-                  <div className="flex items-center gap-2 pt-1 text-[10px] text-secondaryText font-mono">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-[10px] text-secondaryText font-mono">
                     <Clock className="w-3 h-3" />
-                    <span>Triggered: {new Date(alert.created_at).toLocaleString()}</span>
+                    <span>Started: {new Date(alert.created_at).toLocaleString()}</span>
+                    <span>Duration: {formatAlertDuration(alert.created_at, alert.resolved_at || new Date())}</span>
                     {alert.resolved_at && (
                       <span className="text-accent">• Resolved: {new Date(alert.resolved_at).toLocaleString()}</span>
                     )}

@@ -1,84 +1,70 @@
+"""Stop the service before removing its narrowly scoped installation files."""
 import os
-import sys
-import ctypes
+from pathlib import Path
 import shutil
 import subprocess
+import sys
+import stat
+import winreg
+import tempfile
+from tkinter import messagebox
 import win32com.client
-
-def is_admin():
-    try:
-        return ctypes.windll.shell32.IsUserAnAdmin()
-    except Exception:
-        return False
-
-def run_as_admin():
-    if not is_admin():
-        script = os.path.abspath(sys.argv[0])
-        params = " ".join(sys.argv[1:])
-        ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, f'"{script}" {params}', None, 1)
-        sys.exit(0)
+import win32service
+import win32serviceutil
+from config import data_dir
+from desktop import elevate
 
 def uninstall():
-    print("=========================================")
-    print("NodeBeacon Agent Uninstaller")
-    print("=========================================")
-    
-    run_as_admin()
-    
-    install_dir = r"C:\Program Files\NodeBeacon Agent"
-    app_data_dir = r"C:\ProgramData\NodeBeacon"
-    target_exe = os.path.join(install_dir, "NodeBeaconAgent.exe")
-
-    # 1. Stop and remove the Windows Service
-    if os.path.exists(target_exe):
-        print("Stopping and removing NodeBeaconAgent service...")
+    if not elevate():
+        return
+    from main import SingleInstance
+    ui_lock = SingleInstance('UI')
+    try:
+        if not ui_lock.acquired:
+            messagebox.showerror('Close NodeBeacon', 'Close the NodeBeacon control window before uninstalling.')
+            return
+        install = Path(r'C:\Program Files\NodeBeacon Agent').resolve()
+        directory_raw = data_dir()
+        directory = directory_raw.resolve()
+        expected_data = (Path(os.environ.get('PROGRAMDATA', r'C:\ProgramData')) / 'NodeBeacon').resolve()
+        if not getattr(sys, 'frozen', False) or directory != expected_data or install.parent != Path(r'C:\Program Files').resolve():
+            raise ValueError('Uninstall is available only from the installed Windows application.')
+        for candidate in (directory_raw, Path(r'C:\Program Files\NodeBeacon Agent')):
+            if candidate.exists() and candidate.lstat().st_file_attributes & stat.FILE_ATTRIBUTE_REPARSE_POINT:
+                raise ValueError('Refusing to remove a redirected installation directory.')
+        if not messagebox.askyesno('Uninstall NodeBeacon', 'Stop monitoring and remove NodeBeacon configuration and local logs? Website metrics are retained.'):
+            return
         try:
-            subprocess.run([target_exe, "stop"], capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
-            subprocess.run([target_exe, "remove"], capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
-            print("  ✓ Service stopped and removed")
-        except Exception as e:
-            print(f"  ✗ Failed to remove service: {e}")
-
-    # 2. Delete Shortcuts
-    print("Removing shortcuts...")
-    try:
-        shell = win32com.client.Dispatch("WScript.Shell")
-        
-        desktop_dir = shell.SpecialFolders("Desktop")
-        desktop_shortcut = os.path.join(desktop_dir, "NodeBeacon Agent.lnk")
-        if os.path.exists(desktop_shortcut):
-            os.remove(desktop_shortcut)
-            
-        start_menu_dir = shell.SpecialFolders("Programs")
-        start_menu_shortcut = os.path.join(start_menu_dir, "NodeBeacon Agent.lnk")
-        if os.path.exists(start_menu_shortcut):
-            os.remove(start_menu_shortcut)
-        print("  ✓ Shortcuts deleted")
-    except Exception as e:
-        print(f"  ✗ Failed to delete shortcuts: {e}")
-
-    # 3. Clean up ProgramData folder
-    print("Deleting ProgramData application files...")
-    try:
-        if os.path.exists(app_data_dir):
-            shutil.rmtree(app_data_dir)
-            print("  ✓ ProgramData folder removed")
-    except Exception as e:
-        print(f"  ✗ Failed to remove ProgramData directory: {e}")
-
-    # 4. Clean up Program Files folder
-    print("Deleting program files...")
-    try:
-        if os.path.exists(install_dir):
-            uninstall_bat = os.path.join(install_dir, "uninstall.bat")
-            if os.path.exists(uninstall_bat):
-                os.remove(uninstall_bat)
-            print(f"\nUninstall finished. Please manually delete the directory: {install_dir}")
-    except Exception as e:
-        print(f"  ✗ Failed to delete files: {e}")
-
-if __name__ == '__main__':
-    try:
-        uninstall()
-    except KeyboardInterrupt:
-        print("\nUninstall aborted.")
+            if win32serviceutil.QueryServiceStatus('NodeBeaconAgent')[1] != win32service.SERVICE_STOPPED:
+                win32serviceutil.StopService('NodeBeaconAgent')
+                win32serviceutil.WaitForServiceStatus('NodeBeaconAgent', win32service.SERVICE_STOPPED, 30)
+            subprocess.run(['sc.exe', 'delete', 'NodeBeaconAgent'], check=True, capture_output=True,
+                           creationflags=subprocess.CREATE_NO_WINDOW)
+        except win32service.error as exc:
+            if exc.winerror != 1060:
+                raise
+        shell = win32com.client.Dispatch('WScript.Shell')
+        for name in ('Desktop', 'Programs'):
+            (Path(shell.SpecialFolders(name)) / 'NodeBeacon Agent.lnk').unlink(missing_ok=True)
+        try:
+            winreg.DeleteKey(winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\NodeBeaconAgent')
+        except FileNotFoundError:
+            pass
+        if directory.is_dir():
+            shutil.rmtree(directory)
+        # A native PowerShell helper waits for exactly this process to exit.
+        fd, helper = tempfile.mkstemp(prefix='NodeBeacon-uninstall-', suffix='.ps1')
+        with os.fdopen(fd, 'w', encoding='utf-8') as stream:
+            stream.write("$ErrorActionPreference = 'Stop'\n"
+                f"Wait-Process -Id {os.getpid()} -ErrorAction SilentlyContinue\n"
+                "$taskTarget = [IO.Path]::GetFullPath('C:\\Program Files\\NodeBeacon Agent')\n"
+                "if ($taskTarget -ne 'C:\\Program Files\\NodeBeacon Agent') { exit 1 }\n"
+                "Remove-Item -LiteralPath $taskTarget -Recurse -Force\n"
+                "Remove-Item -LiteralPath $PSCommandPath -Force\n")
+        subprocess.Popen(['powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', helper],
+                         creationflags=subprocess.CREATE_NO_WINDOW, close_fds=True)
+        messagebox.showinfo('NodeBeacon removed', 'Service removed. Program files will be removed after this window closes. Website data is unchanged.')
+    except (OSError, ValueError, subprocess.CalledProcessError, win32service.error):
+        messagebox.showerror('Uninstall incomplete', 'Check administrator access and close other NodeBeacon windows. No unrelated folders were removed.')
+    finally:
+        ui_lock.close()

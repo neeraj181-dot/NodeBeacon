@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useServers } from '../contexts/ServerContext';
 import { useAlerts } from '../contexts/AlertContext';
 import { getMetrics } from '../api/metrics';
+import { openActiveAlerts } from './dashboardAlertNavigation';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line
@@ -11,22 +12,42 @@ import {
   Cpu, 
   Database, 
   HardDrive, 
-  ArrowUpRight, 
-  ArrowDownRight, 
   ShieldAlert, 
-  Clock,
   ExternalLink,
   RefreshCw,
   TrendingUp,
   Activity
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+
+function MetricSparkline({ values, color }) {
+  if (values.length < 2) {
+    return <span className="text-[10px] text-secondaryText">History unavailable</span>;
+  }
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const points = values.map((value, index) => {
+    const x = (index / (values.length - 1)) * 100;
+    const y = 25 - ((value - min) / range) * 20;
+    return `${x},${y}`;
+  }).join(' ');
+
+  return (
+    <svg viewBox="0 0 100 28" preserveAspectRatio="none" role="img" aria-label="Recent metric history" className="h-7 w-24 shrink-0">
+      <polyline points={points} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
 
 export default function Dashboard({ onSelectServer, onNavigateTab }) {
-  const { servers, loading: serversLoading } = useServers();
-  const { alerts, loading: alertsLoading } = useAlerts();
+  // React Hook - useContext (Subscribes to global servers and alerts contexts)
+  const { servers } = useServers();
+  const { alerts, setFilters } = useAlerts();
+
+  // React Hook - useState (Manages metric telemetry data and network loading state)
   const [metrics, setMetrics] = useState([]);
-  const [loadingMetrics, setLoadingMetrics] = useState(true);
+  const [, setLoadingMetrics] = useState(true);
 
   const fetchDashboardMetrics = async (silent = false) => {
     if (!silent) setLoadingMetrics(true);
@@ -40,6 +61,7 @@ export default function Dashboard({ onSelectServer, onNavigateTab }) {
     }
   };
 
+  // React Hook - useEffect (Initiates periodic 10-second polling for live metric telemetry)
   useEffect(() => {
     fetchDashboardMetrics();
     const interval = setInterval(() => {
@@ -48,13 +70,15 @@ export default function Dashboard({ onSelectServer, onNavigateTab }) {
     return () => clearInterval(interval);
   }, []);
 
+  // React Hook - useMemo (Optimizes server and alert summary calculations across renders)
   const totalServers = servers.length;
-  const onlineServers = servers.filter(s => s.status === 'Online').length;
+  const onlineServers = useMemo(() => servers.filter(s => s.status === 'Online').length, [servers]);
   const offlineServers = totalServers - onlineServers;
 
-  const activeAlerts = alerts.filter(a => a.status === 'Active');
+  const activeAlerts = useMemo(() => alerts.filter(a => a.status === 'Active'), [alerts]);
   const activeAlertsCount = activeAlerts.length;
-  const criticalAlertsCount = activeAlerts.filter(a => a.severity === 'Critical').length;
+  const criticalAlertsCount = useMemo(() => activeAlerts.filter(a => a.severity === 'Critical').length, [activeAlerts]);
+  const handleViewActiveAlerts = () => openActiveAlerts(activeAlerts, setFilters, onNavigateTab);
 
   const latestMetricByServer = {};
   metrics.forEach(m => {
@@ -75,6 +99,13 @@ export default function Dashboard({ onSelectServer, onNavigateTab }) {
   const avgDisk = onlineServersWithMetrics.length > 0
     ? Math.round(onlineServersWithMetrics.reduce((acc, s) => acc + latestMetricByServer[s.id].disk_usage, 0) / onlineServersWithMetrics.length)
     : 0;
+
+  const metricHistory = [...metrics].reverse();
+  const cpuTrend = metricHistory.map(metric => Number(metric.cpu_usage)).filter(Number.isFinite).slice(-16);
+  const memoryTrend = metricHistory.map(metric => Number(metric.memory_usage)).filter(Number.isFinite).slice(-16);
+  const diskTrend = metricHistory.map(metric => Number(metric.disk_usage)).filter(Number.isFinite).slice(-16);
+  const hasTelemetry = onlineServersWithMetrics.length > 0;
+  const diskCritical = hasTelemetry && avgDisk >= 90;
 
   const formatTimeSlot = (dateStr) => {
     const d = new Date(dateStr);
@@ -132,122 +163,141 @@ export default function Dashboard({ onSelectServer, onNavigateTab }) {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-[#050505] text-white">
+    <div className="flex-1 min-w-0 overflow-y-auto px-5 py-6 sm:px-6 lg:px-8 space-y-6 bg-background text-foreground">
       {/* Hero Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight font-mono uppercase text-white">
+      <div className="border-b border-foreground/10 pb-5">
+        <p className="text-[10px] font-semibold tracking-[0.18em] uppercase text-secondaryText mb-2">NodeBeacon / Operations</p>
+        <h1 className="text-3xl sm:text-[2rem] font-bold tracking-tight text-foreground">
           Monitor your infrastructure.
         </h1>
-        <p className="text-secondaryText text-xs font-medium mt-1">
+        <p className="text-secondaryText text-sm mt-1.5">
           Real-time metrics, node states, and health monitoring logs.
         </p>
       </div>
 
       {/* KPI Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 sm:gap-4">
         {/* Servers KPI */}
-        <div className="glass-panel glass-panel-hover p-6 rounded-2xl relative overflow-hidden group transition-all duration-300">
-          <div className="flex justify-between items-start">
-            <span className="text-[10px] font-bold text-secondaryText uppercase tracking-wider font-mono">Total Servers</span>
-            <div className="p-2.5 bg-white/5 border border-white/5 group-hover:border-accent/30 group-hover:bg-accent/5 rounded-xl transition-all duration-300">
-              <Server className="w-4 h-4 text-white group-hover:text-accent transition-colors" />
+        <div className="min-w-0 bg-card border border-foreground/10 p-4 sm:p-5 rounded-xl transition-colors hover:border-accent/35">
+          <div className="flex justify-between items-start gap-3">
+            <span className="text-[10px] font-bold text-secondaryText uppercase tracking-[0.12em]">Total Servers</span>
+            <div className="p-2 rounded-lg bg-accent/10 text-accent">
+              <Server className="w-4 h-4" aria-hidden="true" />
             </div>
           </div>
-          <div className="mt-4">
-            <span className="text-3xl font-bold font-mono text-white tracking-tight">{totalServers}</span>
-            <div className="flex items-center gap-1.5 mt-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></span>
-              <span className="text-[10px] text-accent font-semibold uppercase font-mono">{onlineServers} Online</span>
-              <span className="text-secondaryText text-[10px] uppercase font-mono ml-1">/ {offlineServers} Offline</span>
+          <div className="mt-3">
+            <span className="text-3xl leading-none font-semibold font-mono tabular-nums text-foreground tracking-tight">{totalServers}</span>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2.5 text-[10px] font-semibold uppercase tracking-wide">
+              <span className="inline-flex items-center gap-1.5 text-accent"><span className="w-1.5 h-1.5 rounded-full bg-accent" />{onlineServers} online</span>
+              <span className={offlineServers > 0 ? 'inline-flex items-center gap-1.5 text-danger' : 'text-secondaryText'}>{offlineServers} offline</span>
+            </div>
+            <div className="mt-3 h-1.5 rounded-full bg-foreground/10 overflow-hidden" aria-label={`${onlineServers} of ${totalServers} servers online`}>
+              <div className="h-full rounded-full bg-accent" style={{ width: `${totalServers ? (onlineServers / totalServers) * 100 : 0}%` }} />
             </div>
           </div>
         </div>
 
         {/* Avg CPU KPI */}
-        <div className="glass-panel glass-panel-hover p-6 rounded-2xl relative overflow-hidden group transition-all duration-300">
-          <div className="flex justify-between items-start">
-            <span className="text-[10px] font-bold text-secondaryText uppercase tracking-wider font-mono">Avg CPU Load</span>
-            <div className="p-2.5 bg-white/5 border border-white/5 group-hover:border-accent/30 group-hover:bg-accent/5 rounded-xl transition-all duration-300">
-              <Cpu className="w-4 h-4 text-accent group-hover:scale-105 transition-transform" />
+        <div className="min-w-0 bg-card border border-foreground/10 p-4 sm:p-5 rounded-xl transition-colors hover:border-accent/35">
+          <div className="flex justify-between items-start gap-3">
+            <span className="text-[10px] font-bold text-secondaryText uppercase tracking-[0.12em]">Avg CPU Load</span>
+            <div className="p-2 rounded-lg bg-accent/10 text-accent">
+              <Cpu className="w-4 h-4" aria-hidden="true" />
             </div>
           </div>
-          <div className="mt-4">
-            <span className="text-3xl font-bold font-mono text-white tracking-tight">{avgCpu}%</span>
-            <div className="flex items-center gap-1 mt-2 text-accent">
-              <Clock className="w-3.5 h-3.5" />
-              <span className="text-[10px] font-bold uppercase font-mono">Telemetry Active</span>
+          <div className="mt-3">
+            <span className="text-3xl leading-none font-semibold font-mono tabular-nums text-foreground tracking-tight">{avgCpu}%</span>
+            <div className="flex items-center gap-1.5 mt-2.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
+              <span className={`w-1.5 h-1.5 rounded-full ${hasTelemetry ? 'bg-accent' : 'bg-secondaryText'}`} />
+              <span>{hasTelemetry ? 'Telemetry active' : 'Awaiting telemetry'}</span>
+            </div>
+            <div className="mt-3 flex h-7 items-center justify-between gap-2 border-t border-foreground/10 pt-2">
+              <span className="text-[10px] text-secondaryText">Recent samples</span>
+              <MetricSparkline values={cpuTrend} color="var(--color-accent)" />
             </div>
           </div>
         </div>
 
         {/* Avg Memory KPI */}
-        <div className="glass-panel glass-panel-hover p-6 rounded-2xl relative overflow-hidden group transition-all duration-300">
-          <div className="flex justify-between items-start">
-            <span className="text-[10px] font-bold text-secondaryText uppercase tracking-wider font-mono">Avg RAM Load</span>
-            <div className="p-2.5 bg-white/5 border border-white/5 group-hover:border-[#5B8CFF]/30 group-hover:bg-[#5B8CFF]/5 rounded-xl transition-all duration-300">
-              <Database className="w-4 h-4 text-[#5B8CFF] group-hover:scale-105 transition-transform" />
+        <div className="min-w-0 bg-card border border-foreground/10 p-4 sm:p-5 rounded-xl transition-colors hover:border-accent/35">
+          <div className="flex justify-between items-start gap-3">
+            <span className="text-[10px] font-bold text-secondaryText uppercase tracking-[0.12em]">Avg RAM Load</span>
+            <div className="p-2 rounded-lg bg-accent/10 text-accent">
+              <Database className="w-4 h-4" aria-hidden="true" />
             </div>
           </div>
-          <div className="mt-4">
-            <span className="text-3xl font-bold font-mono text-white tracking-tight">{avgMemory}%</span>
-            <div className="flex items-center gap-1 mt-2 text-secondaryText">
-              <Clock className="w-3.5 h-3.5" />
-              <span className="text-[10px] font-bold uppercase font-mono">Allocated load</span>
+          <div className="mt-3">
+            <span className="text-3xl leading-none font-semibold font-mono tabular-nums text-foreground tracking-tight">{avgMemory}%</span>
+            <div className="flex items-center gap-1.5 mt-2.5 text-[10px] font-semibold uppercase tracking-wide text-secondaryText">
+              <span className={`w-1.5 h-1.5 rounded-full ${hasTelemetry ? 'bg-accent' : 'bg-secondaryText'}`} />
+              <span>{hasTelemetry ? 'Allocated load' : 'Awaiting telemetry'}</span>
+            </div>
+            <div className="mt-3 flex h-7 items-center justify-between gap-2 border-t border-foreground/10 pt-2">
+              <span className="text-[10px] text-secondaryText">Recent samples</span>
+              <MetricSparkline values={memoryTrend} color="var(--color-accent)" />
             </div>
           </div>
         </div>
 
         {/* Avg Disk KPI */}
-        <div className="glass-panel glass-panel-hover p-6 rounded-2xl relative overflow-hidden group transition-all duration-300">
-          <div className="flex justify-between items-start">
-            <span className="text-[10px] font-bold text-secondaryText uppercase tracking-wider font-mono">Avg Disk Load</span>
-            <div className="p-2.5 bg-white/5 border border-white/5 group-hover:border-white/20 group-hover:bg-white/5 rounded-xl transition-all duration-300">
-              <HardDrive className="w-4 h-4 text-white group-hover:scale-105 transition-transform" />
+        <div className={`min-w-0 bg-card border p-4 sm:p-5 rounded-xl transition-colors ${diskCritical ? 'border-danger/40' : 'border-foreground/10 hover:border-accent/35'}`}>
+          <div className="flex justify-between items-start gap-3">
+            <span className="text-[10px] font-bold text-secondaryText uppercase tracking-[0.12em]">Avg Disk Load</span>
+            <div className={`p-2 rounded-lg ${diskCritical ? 'bg-danger/10 text-danger' : 'bg-accent/10 text-accent'}`}>
+              <HardDrive className="w-4 h-4" aria-hidden="true" />
             </div>
           </div>
-          <div className="mt-4">
-            <span className="text-3xl font-bold font-mono text-white tracking-tight">{avgDisk}%</span>
-            <div className="flex items-center gap-1 mt-2 text-secondaryText">
-              <Clock className="w-3.5 h-3.5" />
-              <span className="text-[10px] font-bold uppercase font-mono">Cluster Capacity</span>
+          <div className="mt-3">
+            <span className="text-3xl leading-none font-semibold font-mono tabular-nums text-foreground tracking-tight">{avgDisk}%</span>
+            <div className={`flex items-center gap-1.5 mt-2.5 text-[10px] font-semibold uppercase tracking-wide ${diskCritical ? 'text-danger' : hasTelemetry ? 'text-accent' : 'text-secondaryText'}`}>
+              {diskCritical ? <ShieldAlert className="w-3.5 h-3.5" /> : <span className={`w-1.5 h-1.5 rounded-full ${hasTelemetry ? 'bg-accent' : 'bg-secondaryText'}`} />}
+              <span>{diskCritical ? 'Critical utilization' : hasTelemetry ? 'Capacity in range' : 'Awaiting telemetry'}</span>
+            </div>
+            <div className="mt-3 flex h-7 items-center justify-between gap-2 border-t border-foreground/10 pt-2">
+              <span className="text-[10px] text-secondaryText">Recent samples</span>
+              <MetricSparkline values={diskTrend} color={diskCritical ? 'var(--color-danger)' : 'var(--color-accent)'} />
             </div>
           </div>
         </div>
 
         {/* Active Alerts KPI */}
-        <div className={`glass-panel p-6 rounded-2xl relative overflow-hidden group transition-all duration-300 border ${activeAlertsCount > 0 ? 'border-danger/20 shadow-[0_0_15px_rgba(255,95,87,0.03)]' : 'glass-panel-hover'}`}>
-          <div className="flex justify-between items-start">
-            <span className="text-[10px] font-bold text-secondaryText uppercase tracking-wider font-mono">Active Outages</span>
-            <div className={`p-2.5 rounded-xl border transition-all duration-300 ${activeAlertsCount > 0 ? 'bg-danger/5 border-danger/20 group-hover:border-danger/40' : 'bg-white/5 border-white/5'}`}>
-              <ShieldAlert className={`w-4 h-4 ${activeAlertsCount > 0 ? 'text-danger animate-pulse' : 'text-accent'}`} />
+        <button
+          type="button"
+          onClick={handleViewActiveAlerts}
+          disabled={activeAlertsCount === 0}
+          aria-label={activeAlertsCount > 0 ? `View ${activeAlertsCount} active incidents in Alerts` : 'No active incidents'}
+          className={`min-w-0 w-full appearance-none text-left bg-card border p-4 sm:p-5 rounded-xl transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-default ${activeAlertsCount > 0 ? 'cursor-pointer border-danger/40 bg-danger/[0.04] hover:border-danger/60 hover:bg-danger/[0.07]' : 'border-foreground/10'}`}
+        >
+          <div className="flex justify-between items-start gap-3">
+            <span className="text-[10px] font-bold text-secondaryText uppercase tracking-[0.12em]">Active Outages</span>
+            <div className={`p-2 rounded-lg ${activeAlertsCount > 0 ? 'bg-danger/10 text-danger' : 'bg-accent/10 text-accent'}`}>
+              <ShieldAlert className="w-4 h-4" aria-hidden="true" />
             </div>
           </div>
-          <div className="mt-4">
-            <span className="text-3xl font-bold font-mono text-white tracking-tight">{activeAlertsCount}</span>
-            <div className="flex items-center gap-1 mt-2">
+          <div className="mt-3">
+            <span className="text-3xl leading-none font-semibold font-mono tabular-nums text-foreground tracking-tight">{activeAlertsCount}</span>
+            <div className="flex items-center gap-1.5 mt-2.5 text-[10px] font-bold uppercase tracking-wide">
               {activeAlertsCount > 0 ? (
                 <>
-                  <span className="relative flex h-1.5 w-1.5 mr-1">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-danger opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-danger"></span>
-                  </span>
-                  <span className="text-[10px] font-bold text-danger uppercase font-mono">{criticalAlertsCount} Critical</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-danger" />
+                  <span className="text-danger">{criticalAlertsCount} critical</span>
                 </>
               ) : (
-                <span className="text-[10px] font-bold text-accent uppercase font-mono">All nodes operational</span>
+                <span className="text-accent">All nodes operational</span>
               )}
             </div>
+            <p className="mt-3 border-t border-foreground/10 pt-2 text-[10px] text-secondaryText">{activeAlertsCount > 0 ? 'Incident requires attention' : 'No active incidents'}</p>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Main Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* CPU Chart */}
-        <div className="glass-panel p-6 rounded-2xl lg:col-span-2 space-y-6">
+        <div className="bg-card border border-foreground/10 p-5 sm:p-6 rounded-xl lg:col-span-2 space-y-5">
           <div className="flex justify-between items-center">
             <div>
-              <h3 className="text-xs font-bold text-white font-mono uppercase tracking-wider">CPU History (24h)</h3>
+              <h3 className="text-sm font-semibold text-foreground tracking-tight">CPU History (24h)</h3>
               <p className="text-[10px] text-secondaryText font-mono">Aggregate workload usage per infrastructure node.</p>
             </div>
             <div className="flex items-center gap-2 text-[10px] font-mono text-secondaryText">
@@ -274,13 +324,13 @@ export default function Dashboard({ onSelectServer, onNavigateTab }) {
                       <stop offset="95%" stopColor="#5B8CFF" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.02)" vertical={false} />
-                  <XAxis dataKey="time" stroke="rgba(255,255,255,0.3)" fontSize={10} axisLine={false} tickLine={false} />
-                  <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} axisLine={false} tickLine={false} domain={[0, 100]} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
+                  <XAxis dataKey="time" stroke="var(--chart-label)" fontSize={10} axisLine={false} tickLine={false} />
+                  <YAxis stroke="var(--chart-label)" fontSize={10} axisLine={false} tickLine={false} domain={[0, 100]} />
                   <Tooltip 
-                    contentStyle={{ backgroundColor: '#101010', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px' }} 
-                    labelStyle={{ color: '#8A8A8A', fontFamily: 'monospace', fontSize: '10px' }}
-                    itemStyle={{ fontSize: '11px', color: '#fff' }}
+                    contentStyle={{ backgroundColor: 'var(--chart-tooltip)', color: 'var(--color-foreground)', border: '1px solid var(--chart-grid)', borderRadius: '12px' }}
+                    labelStyle={{ color: 'var(--chart-label)', fontFamily: 'monospace', fontSize: '10px' }}
+                    itemStyle={{ fontSize: '11px', color: 'var(--color-foreground)' }}
                   />
                   {serverNamesForLegend[0] && (
                     <Area type="monotone" dataKey={serverNamesForLegend[0]} stroke="#57E389" strokeWidth={1.5} fillOpacity={1} fill="url(#cpuGreen)" />
@@ -295,10 +345,10 @@ export default function Dashboard({ onSelectServer, onNavigateTab }) {
         </div>
 
         {/* Network & Traffic Info */}
-        <div className="glass-panel p-6 rounded-2xl space-y-6">
+        <div className="bg-card border border-foreground/10 p-5 sm:p-6 rounded-xl space-y-5">
           <div className="flex justify-between items-center">
             <div>
-              <h3 className="text-xs font-bold text-white font-mono uppercase tracking-wider">Network IO</h3>
+              <h3 className="text-sm font-semibold text-foreground tracking-tight">Network IO</h3>
               <p className="text-[10px] text-secondaryText font-mono">Throughput speeds (MB/s).</p>
             </div>
             <Activity className="w-4 h-4 text-accent" />
@@ -312,13 +362,13 @@ export default function Dashboard({ onSelectServer, onNavigateTab }) {
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={networkChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.02)" vertical={false} />
-                  <XAxis dataKey="time" stroke="rgba(255,255,255,0.3)" fontSize={10} axisLine={false} tickLine={false} />
-                  <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} axisLine={false} tickLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
+                  <XAxis dataKey="time" stroke="var(--chart-label)" fontSize={10} axisLine={false} tickLine={false} />
+                  <YAxis stroke="var(--chart-label)" fontSize={10} axisLine={false} tickLine={false} />
                   <Tooltip 
-                    contentStyle={{ backgroundColor: '#101010', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px' }} 
-                    labelStyle={{ color: '#8A8A8A', fontFamily: 'monospace', fontSize: '10px' }}
-                    itemStyle={{ fontSize: '11px', color: '#fff' }}
+                    contentStyle={{ backgroundColor: 'var(--chart-tooltip)', color: 'var(--color-foreground)', border: '1px solid var(--chart-grid)', borderRadius: '12px' }}
+                    labelStyle={{ color: 'var(--chart-label)', fontFamily: 'monospace', fontSize: '10px' }}
+                    itemStyle={{ fontSize: '11px', color: 'var(--color-foreground)' }}
                   />
                   <Line type="monotone" dataKey="Download" stroke="#57E389" strokeWidth={1.5} dot={false} />
                   <Line type="monotone" dataKey="Upload" stroke="#FF5F57" strokeWidth={1.5} dot={false} />
@@ -330,9 +380,9 @@ export default function Dashboard({ onSelectServer, onNavigateTab }) {
       </div>
 
       {/* Grid containing Active Alerts & Servers status */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Recent Alerts Card */}
-        <div className="glass-panel p-6 rounded-2xl space-y-4">
+        <div className="bg-card border border-foreground/10 p-5 sm:p-6 rounded-xl space-y-4">
           <div className="flex justify-between items-center border-b border-white/5 pb-3">
             <h3 className="text-xs font-bold text-white font-mono uppercase tracking-wider">Active Alerts log</h3>
             <button 
@@ -387,7 +437,7 @@ export default function Dashboard({ onSelectServer, onNavigateTab }) {
         </div>
 
         {/* Server List Status */}
-        <div className="glass-panel p-6 rounded-2xl space-y-4">
+        <div className="bg-card border border-foreground/10 p-5 sm:p-6 rounded-xl space-y-4">
           <div className="flex justify-between items-center border-b border-white/5 pb-3">
             <h3 className="text-xs font-bold text-white font-mono uppercase tracking-wider">Infra Nodes Status</h3>
             <button 

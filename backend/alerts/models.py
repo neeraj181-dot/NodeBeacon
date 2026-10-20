@@ -37,6 +37,10 @@ class Alert(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['server', 'status'], name='alert_server_status_idx'),
+            models.Index(fields=['status', '-created_at'], name='alert_status_created_idx'),
+        ]
 
     def __str__(self):
         return f"{self.server.name} - {self.title} ({self.status})"

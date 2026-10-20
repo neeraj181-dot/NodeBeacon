@@ -9,6 +9,9 @@ class AgentAPIKeyAuthentication(authentication.BaseAuthentication):
     Returns 401 Unauthorized if missing or invalid.
     """
     def authenticate(self, request):
+        if request.headers.get('X-Device-Token'):
+            from servers.agent_api import DeviceAuthentication
+            return DeviceAuthentication().authenticate(request)
         api_key = request.META.get('HTTP_X_API_KEY')
         if not api_key:
             raise exceptions.AuthenticationFailed('API Key is required in X-API-Key header.')

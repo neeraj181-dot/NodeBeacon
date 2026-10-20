@@ -79,6 +79,28 @@ class AlertTests(APITestCase):
         self.assertEqual(alert.status, 'Resolved')
         self.assertIsNotNone(alert.resolved_at)
 
+    def test_cpu_usage_equal_to_threshold_does_not_create_alert(self):
+        self.user1.cpu_threshold = 10.0
+        self.user1.save(update_fields=['cpu_threshold'])
+        self.client.credentials(HTTP_X_API_KEY=self.server1.api_key)
+        at_threshold = self.base_metrics.copy()
+        at_threshold['cpu_usage'] = 10.0
+
+        response = self.client.post(self.metrics_url, at_threshold, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertFalse(Alert.objects.filter(server=self.server1, title='High CPU Usage').exists())
+
+        above_threshold = self.base_metrics.copy()
+        above_threshold['cpu_usage'] = 10.1
+        response = self.client.post(self.metrics_url, above_threshold, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        alert = Alert.objects.get(server=self.server1, title='High CPU Usage')
+        self.assertEqual(alert.status, 'Active')
+        self.assertIn('10.1%', alert.description)
+        self.assertIn('10.0%', alert.description)
+
     def test_memory_and_disk_alerts_trigger(self):
         self.client.credentials(HTTP_X_API_KEY=self.server1.api_key)
         
@@ -96,7 +118,7 @@ class AlertTests(APITestCase):
         self.assertEqual(mem_alert.status, 'Active')
 
         # Check disk alert
-        disk_alert = Alert.objects.filter(server=self.server1, title="High Disk Usage").first()
+        disk_alert = Alert.objects.filter(server=self.server1, title="Disk Usage Critical").first()
         self.assertIsNotNone(disk_alert)
         self.assertEqual(disk_alert.status, 'Active')
 

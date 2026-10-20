@@ -13,16 +13,22 @@ class OrganizationSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     organization_details = OrganizationSerializer(source='organization', read_only=True)
+    is_google_linked = serializers.SerializerMethodField()
+
+    def get_is_google_linked(self, obj):
+        return bool(getattr(obj, 'google_id', None))
 
     class Meta:
         model = User
         fields = (
             'id', 'username', 'email', 'first_name', 'last_name', 'date_joined',
             'enable_email_notifications', 'enable_desktop_notifications', 'recipient_email',
+            'email_verified', 'notify_offline_email', 'notify_critical_email',
+            'notify_on_laptop_unlock',
             'cpu_threshold', 'memory_threshold', 'disk_threshold', 'heartbeat_timeout',
-            'role', 'member_role', 'organization', 'organization_details'
+            'role', 'member_role', 'organization', 'organization_details', 'is_google_linked'
         )
-        read_only_fields = ('id', 'date_joined')
+        read_only_fields = ('id', 'date_joined', 'role', 'member_role', 'organization', 'is_google_linked', 'email_verified')
 
 
 class UserRegisterSerializer(serializers.ModelSerializer):

@@ -5,6 +5,21 @@ export const login = async (username, password) => {
   return response.data;
 };
 
+export const getGoogleAuthUrl = async (redirectUri) => {
+  const params = redirectUri ? { redirect_uri: redirectUri } : {};
+  const response = await api.get('auth/google/url/', { params });
+  return response.data;
+};
+
+export const exchangeGoogleCode = async (code, redirectUri, state) => {
+  const response = await api.post('auth/google/', {
+    code,
+    redirect_uri: redirectUri,
+    state,
+  });
+  return response.data;
+};
+
 export const register = async (
   username,
   email,
@@ -45,6 +60,62 @@ export const updateProfile = async (profileData) => {
 
 export const sendTestEmail = async () => {
   const response = await api.post('test-email/');
+  return response.data;
+};
+
+export const getEmailSettings = async () => {
+  const response = await api.get('email/settings/');
+  return response.data;
+};
+
+export const updateEmailSettings = async (settings) => {
+  const response = await api.patch('email/settings/', settings);
+  return response.data;
+};
+
+export const connectEmail = async (email) => {
+  const response = await api.post('email/connect/', { email });
+  return response.data;
+};
+
+export const verifyEmailCode = async (code, token = '') => {
+  const payload = code ? { code } : { token };
+  const response = await api.post('email/verify/', payload);
+  return response.data;
+};
+
+export const resendEmailVerification = async () => {
+  const response = await api.post('email/resend/');
+  return response.data;
+};
+
+export const sendEmailTestNotification = async () => {
+  const response = await api.post('email/test/');
+  return response.data;
+};
+
+export const getTelegramSettings = async () => {
+  const response = await api.get('telegram/settings/');
+  return response.data;
+};
+
+export const updateTelegramSettings = async (settings) => {
+  const response = await api.patch('telegram/settings/', settings);
+  return response.data;
+};
+
+export const startTelegramConnect = async () => {
+  const response = await api.post('telegram/connect/start/');
+  return response.data;
+};
+
+export const verifyTelegramConnect = async () => {
+  const response = await api.post('telegram/connect/verify/');
+  return response.data;
+};
+
+export const sendTelegramTest = async () => {
+  const response = await api.post('telegram/test/');
   return response.data;
 };
 

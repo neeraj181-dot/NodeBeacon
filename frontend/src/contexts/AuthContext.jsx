@@ -1,15 +1,17 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { login as apiLogin, register as apiRegister, getProfile } from '../api/auth';
+import { login as apiLogin, register as apiRegister, getProfile, exchangeGoogleCode } from '../api/auth';
 
+// React Hook / API - createContext for global user session state
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
+  // React Hook - useState (Tracks current user, authentication status, and initial verification loading)
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Initialize auth state
+  // React Hook - useEffect (Initializes authentication state on app startup by verifying JWT token)
   useEffect(() => {
     const fetchUser = async () => {
       const token = localStorage.getItem('access_token');
@@ -76,6 +78,48 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const loginWithGoogle = async (code, redirectUri, state) => {
+    setError(null);
+    try {
+      const data = await exchangeGoogleCode(code, redirectUri, state);
+      localStorage.setItem('access_token', data.access);
+      localStorage.setItem('refresh_token', data.refresh);
+      if (data.user) {
+        setUser(data.user);
+      } else {
+        const profile = await getProfile();
+        setUser(profile);
+      }
+      setIsAuthenticated(true);
+      return data;
+    } catch (err) {
+      const errMsg = err.response?.data?.detail
+        || err.response?.data?.message
+        || err.response?.data?.error
+        || err.message
+        || 'Google sign-in failed. Please try again.';
+      setError(errMsg);
+      throw new Error(errMsg);
+    }
+  };
+
+  const setTokensAndLogin = async (accessToken, refreshToken) => {
+    setError(null);
+    try {
+      localStorage.setItem('access_token', accessToken);
+      localStorage.setItem('refresh_token', refreshToken);
+      const profile = await getProfile();
+      setUser(profile);
+      setIsAuthenticated(true);
+      return profile;
+    } catch (err) {
+      logout();
+      const errMsg = err.response?.data?.detail || err.message || 'Failed to authenticate session.';
+      setError(errMsg);
+      throw new Error(errMsg);
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
@@ -83,11 +127,28 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(false);
   };
 
+  const updateUser = (updates) => {
+    setUser(current => current ? { ...current, ...updates } : current);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, loading, error, login, register, logout, setError }}>
+    <AuthContext.Provider value={{
+      user,
+      isAuthenticated,
+      loading,
+      error,
+      login,
+      loginWithGoogle,
+      setTokensAndLogin,
+      register,
+      logout,
+      setError,
+      updateUser
+    }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
+// React Hook - useContext (Custom hook exposing authentication context to any component)
 export const useAuth = () => useContext(AuthContext);

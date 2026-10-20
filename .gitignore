@@ -2,6 +2,7 @@
 frontend/.refact/
 .env
 .env.*
+!.env.example
 __pycache__/
 *.pyc
 staticfiles/
@@ -12,3 +13,7 @@ dist/
 .vscode/
 .idea/
 db.sqlite3
+agent/config.json
+agent/status.json
+agent/enrollment.json
+agent/logs/

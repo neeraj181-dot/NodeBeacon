@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useServers } from '../contexts/ServerContext';
-import { Server, Plus, Download, HelpCircle, X, Copy, Check, Terminal } from 'lucide-react';
+import { Server, Plus, Download, HelpCircle, X, Copy, Check, Terminal, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ServerCard from './ServerCard';
 import { getMetrics } from '../api/metrics';
+import AgentDeployment from './AgentDeployment';
 
 
 export default function ServersTab({ onViewServer }) {
@@ -41,6 +42,7 @@ export default function ServersTab({ onViewServer }) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+  const [agentDevice, setAgentDevice] = useState(null);
 
   
   // Form states
@@ -191,7 +193,7 @@ export default function ServersTab({ onViewServer }) {
         <div className="flex gap-3">
 
           <button
-            onClick={() => setIsDownloadModalOpen(true)}
+            onClick={() => { setAgentDevice(null); setIsDownloadModalOpen(true); }}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-hover border border-white/5 text-white font-bold text-xs uppercase tracking-wider font-mono hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
           >
             <Download className="w-4 h-4 text-accent" />
@@ -233,6 +235,7 @@ export default function ServersTab({ onViewServer }) {
               onViewServer={onViewServer}
               onEdit={openEditModal}
               onDelete={openDeleteModal}
+              onConfigure={(device) => { setAgentDevice(device); setIsDownloadModalOpen(true); }}
             />
           ))}
         </AnimatePresence>
@@ -575,105 +578,7 @@ export default function ServersTab({ onViewServer }) {
       </AnimatePresence>
 
       {/* DOWNLOAD AGENT MODAL */}
-      <AnimatePresence>
-        {isDownloadModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-[#121212] border border-white/10 p-8 rounded-[24px] w-full max-w-lg space-y-6 relative overflow-hidden"
-            >
-              <button
-                onClick={() => setIsDownloadModalOpen(false)}
-                className="absolute top-6 right-6 text-secondaryText hover:text-white p-1 rounded transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-
-              <div className="space-y-1">
-                <h3 className="text-lg font-bold font-mono text-white uppercase tracking-wider flex items-center gap-2">
-                  <Download className="w-5 h-5 text-accent" />
-                  <span>Agent Deployment Guide</span>
-                </h3>
-                <p className="text-xs text-secondaryText font-medium">
-                  Follow these simple steps to install the monitoring agent on Windows.
-                </p>
-              </div>
-
-              {/* Steps list */}
-              <div className="space-y-3.5 pt-2">
-                {/* Step 1 */}
-                <div className="flex gap-3">
-                  <span className="w-5 h-5 rounded bg-accent/15 border border-accent/25 text-accent font-bold font-mono text-[10px] flex items-center justify-center shrink-0">1</span>
-                  <div>
-                    <h4 className="text-xs font-bold text-white uppercase font-mono tracking-wider">Create Server Node</h4>
-                    <p className="text-[11px] text-secondaryText">Click "Add Node" on the dashboard to register your server details.</p>
-                  </div>
-                </div>
-
-                {/* Step 2 */}
-                <div className="flex gap-3">
-                  <span className="w-5 h-5 rounded bg-accent/15 border border-accent/25 text-accent font-bold font-mono text-[10px] flex items-center justify-center shrink-0">2</span>
-                  <div>
-                    <h4 className="text-xs font-bold text-white uppercase font-mono tracking-wider">Copy API Key</h4>
-                    <p className="text-[11px] text-secondaryText">Copy the secure, unique API Key generated for your server.</p>
-                  </div>
-                </div>
-
-                {/* Step 3 */}
-                <div className="flex gap-3">
-                  <span className="w-5 h-5 rounded bg-accent/15 border border-accent/25 text-accent font-bold font-mono text-[10px] flex items-center justify-center shrink-0">3</span>
-                  <div>
-                    <h4 className="text-xs font-bold text-white uppercase font-mono tracking-wider">Download Installer</h4>
-                    <p className="text-[11px] text-secondaryText">Click the button below to download the compiled NodeBeaconAgent.exe installer.</p>
-
-                  </div>
-                </div>
-
-                {/* Step 4 */}
-                <div className="flex gap-3">
-                  <span className="w-5 h-5 rounded bg-accent/15 border border-accent/25 text-accent font-bold font-mono text-[10px] flex items-center justify-center shrink-0">4</span>
-                  <div>
-                    <h4 className="text-xs font-bold text-white uppercase font-mono tracking-wider">Run Installer</h4>
-                    <p className="text-[11px] text-secondaryText">Run the downloaded setup executable, approving the Windows administrator prompt.</p>
-                  </div>
-                </div>
-
-                {/* Step 5 */}
-                <div className="flex gap-3">
-                  <span className="w-5 h-5 rounded bg-accent/15 border border-accent/25 text-accent font-bold font-mono text-[10px] flex items-center justify-center shrink-0">5</span>
-                  <div>
-                    <h4 className="text-xs font-bold text-white uppercase font-mono tracking-wider">Paste Key & Install</h4>
-                    <p className="text-[11px] text-secondaryText">Paste your API Key, configure interval settings, and click "Install".</p>
-                  </div>
-                </div>
-
-                {/* Step 6 */}
-                <div className="flex gap-3">
-                  <span className="w-5 h-5 rounded bg-accent/15 border border-accent/25 text-accent font-bold font-mono text-[10px] flex items-center justify-center shrink-0">6</span>
-                  <div>
-                    <h4 className="text-xs font-bold text-white uppercase font-mono tracking-wider">Starts Monitoring</h4>
-                    <p className="text-[11px] text-secondaryText">The agent installs as a Windows service and immediately begins publishing system metrics.</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Download CTA Button */}
-              <div className="pt-2 border-t border-white/5">
-                <a
-                  href={`${import.meta.env.VITE_API_URL}/api/agent/download/`}
-                  download
-                  className="w-full h-11 bg-accent text-[#070707] font-bold rounded-xl text-xs uppercase tracking-wider font-mono flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer shadow-[0_0_20px_rgba(87,227,137,0.15)] text-center"
-                >
-                  <Download className="w-4 h-4 text-[#070707]" />
-                  <span>Download Windows Installer (EXE)</span>
-                </a>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {isDownloadModalOpen && <AgentDeployment servers={servers} initialServer={agentDevice} onClose={() => setIsDownloadModalOpen(false)} />}
     </div>
   );
 }

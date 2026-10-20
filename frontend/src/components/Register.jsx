@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+// React Router - Link and useNavigate for page navigation
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { User, Mail, Lock, Eye, EyeOff, ArrowRight, Building } from 'lucide-react';
 import Logo from './Logo';
@@ -6,6 +8,10 @@ import WaveBackground from './WaveBackground';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Register({ onRegister, onNavigate }) {
+  // React Router - useNavigate Hook
+  const navigate = useNavigate();
+
+  // React Hook - useState (Tracks account type selection, form inputs, and registration status)
   const [accountType, setAccountType] = useState(null); // 'INDIVIDUAL' or 'ORGANIZATION'
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -21,6 +27,8 @@ export default function Register({ onRegister, onNavigate }) {
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // React Hook - useContext (Access registration action from AuthContext)
   const { register } = useAuth();
 
   const handleSubmit = async (e) => {
@@ -131,9 +139,14 @@ export default function Register({ onRegister, onNavigate }) {
             </div>
           </div>
 
-          <button onClick={() => onNavigate('login')} className="text-xs text-secondaryText hover:text-white font-mono uppercase tracking-wider">
+          {/* React Router - Declarative Link to login */}
+          <Link
+            to="/login"
+            onClick={() => onNavigate?.('login')}
+            className="text-xs text-secondaryText hover:text-white font-mono uppercase tracking-wider"
+          >
             Already have an account? Log in
-          </button>
+          </Link>
         </div>
       ) : (
         <motion.div 
