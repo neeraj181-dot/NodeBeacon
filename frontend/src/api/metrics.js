@@ -12,9 +12,16 @@ export const getServerMetrics = async (serverId, limit = 100) => {
   return response.data;
 };
 
-export const exportPDF = async () => {
+export const exportPDF = async (params = {}) => {
   const response = await api.get('metrics/export-pdf/', {
+    params,
     responseType: 'blob',
   });
   return response;
 };
+
+export const getReportData = async (params = {}) => {
+  const response = await api.get('metrics/report-data/', { params });
+  return response.data;
+};
+
