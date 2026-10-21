@@ -74,7 +74,7 @@ export default function ServerCard({ server, metrics, onViewServer, onEdit, onDe
             {server.device_type || 'Server'}
           </span>
         </div>
-        
+
         <div className="flex items-center gap-2 shrink-0">
           <OnlineBadge status={server.status} />
           <div className="relative">
@@ -105,7 +105,7 @@ export default function ServerCard({ server, metrics, onViewServer, onEdit, onDe
           <span className="text-white/20 font-mono">•</span>
           <span className="font-mono text-white/90">{server.ip_address}</span>
         </div>
-        
+
         {/* Org Metadata info (optional) */}
         {(server.department || server.location || server.owner_email) && (
           <div className="text-[10px] font-mono text-secondaryText/80 space-y-0.5 border-t border-white/5 pt-1.5 mt-1">

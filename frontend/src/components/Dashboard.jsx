@@ -3,16 +3,16 @@ import { useServers } from '../contexts/ServerContext';
 import { useAlerts } from '../contexts/AlertContext';
 import { getMetrics } from '../api/metrics';
 import { openActiveAlerts } from './dashboardAlertNavigation';
-import { 
+import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line
 } from 'recharts';
-import { 
-  Server, 
-  Cpu, 
-  Database, 
-  HardDrive, 
-  ShieldAlert, 
+import {
+  Server,
+  Cpu,
+  Database,
+  HardDrive,
+  ShieldAlert,
   ExternalLink,
   RefreshCw,
   TrendingUp,
@@ -316,27 +316,27 @@ export default function Dashboard({ onSelectServer, onNavigateTab }) {
                 <AreaChart data={cpuChartData}>
                   <defs>
                     <linearGradient id="cpuGreen" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#57E389" stopOpacity={0.12}/>
-                      <stop offset="95%" stopColor="#57E389" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="var(--color-accent)" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="var(--color-accent)" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="cpuBlue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#5B8CFF" stopOpacity={0.12}/>
-                      <stop offset="95%" stopColor="#5B8CFF" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="var(--color-blue)" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="var(--color-blue)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
                   <XAxis dataKey="time" stroke="var(--chart-label)" fontSize={10} axisLine={false} tickLine={false} />
                   <YAxis stroke="var(--chart-label)" fontSize={10} axisLine={false} tickLine={false} domain={[0, 100]} />
-                  <Tooltip 
+                  <Tooltip
                     contentStyle={{ backgroundColor: 'var(--chart-tooltip)', color: 'var(--color-foreground)', border: '1px solid var(--chart-grid)', borderRadius: '12px' }}
                     labelStyle={{ color: 'var(--chart-label)', fontFamily: 'monospace', fontSize: '10px' }}
                     itemStyle={{ fontSize: '11px', color: 'var(--color-foreground)' }}
                   />
                   {serverNamesForLegend[0] && (
-                    <Area type="monotone" dataKey={serverNamesForLegend[0]} stroke="#57E389" strokeWidth={1.5} fillOpacity={1} fill="url(#cpuGreen)" />
+                    <Area type="monotone" dataKey={serverNamesForLegend[0]} stroke="var(--color-accent)" strokeWidth={1.5} fillOpacity={1} fill="url(#cpuGreen)" />
                   )}
                   {serverNamesForLegend[1] && (
-                    <Area type="monotone" dataKey={serverNamesForLegend[1]} stroke="#5B8CFF" strokeWidth={1.5} fillOpacity={1} fill="url(#cpuBlue)" />
+                    <Area type="monotone" dataKey={serverNamesForLegend[1]} stroke="var(--color-blue)" strokeWidth={1.5} fillOpacity={1} fill="url(#cpuBlue)" />
                   )}
                 </AreaChart>
               </ResponsiveContainer>
@@ -365,13 +365,13 @@ export default function Dashboard({ onSelectServer, onNavigateTab }) {
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
                   <XAxis dataKey="time" stroke="var(--chart-label)" fontSize={10} axisLine={false} tickLine={false} />
                   <YAxis stroke="var(--chart-label)" fontSize={10} axisLine={false} tickLine={false} />
-                  <Tooltip 
+                  <Tooltip
                     contentStyle={{ backgroundColor: 'var(--chart-tooltip)', color: 'var(--color-foreground)', border: '1px solid var(--chart-grid)', borderRadius: '12px' }}
                     labelStyle={{ color: 'var(--chart-label)', fontFamily: 'monospace', fontSize: '10px' }}
                     itemStyle={{ fontSize: '11px', color: 'var(--color-foreground)' }}
                   />
-                  <Line type="monotone" dataKey="Download" stroke="#57E389" strokeWidth={1.5} dot={false} />
-                  <Line type="monotone" dataKey="Upload" stroke="#FF5F57" strokeWidth={1.5} dot={false} />
+                  <Line type="monotone" dataKey="Download" stroke="var(--color-accent)" strokeWidth={1.5} dot={false} />
+                  <Line type="monotone" dataKey="Upload" stroke="var(--color-danger)" strokeWidth={1.5} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -385,7 +385,7 @@ export default function Dashboard({ onSelectServer, onNavigateTab }) {
         <div className="bg-card border border-foreground/10 p-5 sm:p-6 rounded-xl space-y-4">
           <div className="flex justify-between items-center border-b border-white/5 pb-3">
             <h3 className="text-xs font-bold text-white font-mono uppercase tracking-wider">Active Alerts log</h3>
-            <button 
+            <button
               onClick={() => onNavigateTab('alerts')}
               className="text-[10px] text-accent tracking-wider font-semibold hover:underline font-mono uppercase cursor-pointer"
             >
@@ -394,20 +394,18 @@ export default function Dashboard({ onSelectServer, onNavigateTab }) {
           </div>
           <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
             {alerts.slice(0, 5).map(alert => (
-              <div 
+              <div
                 key={alert.id}
-                className={`p-4 rounded-xl border flex items-center justify-between transition-all duration-200 ${
-                  alert.status === 'Resolved'
+                className={`p-4 rounded-xl border flex items-center justify-between transition-all duration-200 ${alert.status === 'Resolved'
                     ? 'bg-white/[0.01] border-white/5 opacity-50'
-                    : alert.severity === 'Critical' 
-                      ? 'bg-danger/5 border-danger/20 hover:border-danger/30' 
+                    : alert.severity === 'Critical'
+                      ? 'bg-danger/5 border-danger/20 hover:border-danger/30'
                       : 'bg-warning/5 border-warning/20 hover:border-warning/30'
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <span className={`w-2 h-2 rounded-full shrink-0 ${
-                    alert.status === 'Resolved' ? 'bg-accent animate-pulse' : alert.severity === 'Critical' ? 'bg-danger animate-pulse' : 'bg-warning'
-                  }`}></span>
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${alert.status === 'Resolved' ? 'bg-accent animate-pulse' : alert.severity === 'Critical' ? 'bg-danger animate-pulse' : 'bg-warning'
+                    }`}></span>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-mono font-bold text-white uppercase truncate max-w-[120px]">
@@ -440,7 +438,7 @@ export default function Dashboard({ onSelectServer, onNavigateTab }) {
         <div className="bg-card border border-foreground/10 p-5 sm:p-6 rounded-xl space-y-4">
           <div className="flex justify-between items-center border-b border-white/5 pb-3">
             <h3 className="text-xs font-bold text-white font-mono uppercase tracking-wider">Infra Nodes Status</h3>
-            <button 
+            <button
               onClick={() => onNavigateTab('servers')}
               className="text-[10px] text-secondaryText hover:text-white flex items-center gap-1 uppercase font-mono tracking-wider cursor-pointer"
             >
@@ -452,8 +450,8 @@ export default function Dashboard({ onSelectServer, onNavigateTab }) {
             {servers.slice(0, 5).map(server => {
               const m = latestMetricByServer[server.id] || { cpu_usage: 0, memory_usage: 0 };
               return (
-                <div 
-                  key={server.id} 
+                <div
+                  key={server.id}
                   className="p-3 bg-white/[0.01] hover:bg-white/[0.03] border border-white/5 hover:border-white/10 rounded-xl transition-all duration-150 flex items-center justify-between cursor-pointer"
                   onClick={() => onSelectServer(server.id)}
                 >

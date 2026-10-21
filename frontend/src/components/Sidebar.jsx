@@ -1,14 +1,14 @@
 import React, { useMemo } from 'react';
 // React Router - Declarative Navigation Link
 import { Link } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Server, 
-  Activity, 
-  ShieldAlert, 
-  Terminal, 
-  FileText, 
-  Blocks, 
+import {
+  LayoutDashboard,
+  Server,
+  Activity,
+  ShieldAlert,
+  Terminal,
+  FileText,
+  Blocks,
   Settings,
   User,
   LogOut,
@@ -22,7 +22,7 @@ import { motion } from 'framer-motion';
 export default function Sidebar({ currentTab, setCurrentTab }) {
   // React Hook - useContext (Access user role and logout handler from AuthContext)
   const { user, logout } = useAuth();
-  
+
   // React Hook - useMemo (Memoizes navigation items based on user permissions)
   const menuItems = useMemo(() => {
     const baseItems = [
@@ -47,10 +47,10 @@ export default function Sidebar({ currentTab, setCurrentTab }) {
     <aside className="w-[280px] h-screen bg-[#101010] border-r border-white/5 flex flex-col justify-between shrink-0 select-none p-6 pb-4 z-10">
       {/* Branding & Navigation Group */}
       <div className="space-y-8">
-        
+
         {/* React Router - Declarative Link navigating to home/dashboard */}
-        <Link 
-          to="/" 
+        <Link
+          to="/"
           onClick={() => setCurrentTab('dashboard')}
           className="flex items-center gap-4 cursor-pointer focus:outline-none"
         >
@@ -74,21 +74,20 @@ export default function Sidebar({ currentTab, setCurrentTab }) {
               <button
                 key={item.id}
                 onClick={() => setCurrentTab(item.id)}
-                className={`relative w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs transition-all duration-200 group text-left cursor-pointer ${
-                  isActive 
-                    ? 'text-accent font-bold bg-white/5 border border-white/5 shadow-[0_0_15px_rgba(87,227,137,0.06)]' 
+                className={`relative w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs transition-all duration-200 group text-left cursor-pointer ${isActive
+                    ? 'text-accent font-bold bg-white/5 border border-white/5 shadow-[0_0_15px_rgba(87,227,137,0.06)]'
                     : 'text-secondaryText font-medium hover:text-white hover:bg-white/[0.02]'
-                }`}
+                  }`}
               >
                 {/* Active left indicator slide */}
                 {isActive && (
-                  <motion.div 
+                  <motion.div
                     layoutId="sidebarActiveLine"
                     className="absolute left-0 top-[25%] w-[3px] h-[50%] bg-accent rounded-r-full"
                     transition={{ type: "spring", stiffness: 350, damping: 30 }}
                   />
                 )}
-                
+
                 <Icon className={`w-4 h-4 transition-transform duration-200 group-hover:scale-110 shrink-0 ${isActive ? 'text-accent' : 'text-secondaryText group-hover:text-white'}`} />
                 <span className="tracking-wider uppercase font-mono">{item.name}</span>
               </button>
@@ -129,15 +128,15 @@ export default function Sidebar({ currentTab, setCurrentTab }) {
             </div>
             <div className="flex-1 min-w-0">
               <span className="text-xs font-semibold text-white block truncate">
-                {user?.first_name || user?.last_name 
-                  ? `${user.first_name} ${user.last_name}`.trim() 
+                {user?.first_name || user?.last_name
+                  ? `${user.first_name} ${user.last_name}`.trim()
                   : user?.username || 'Alex Rivera'}
               </span>
               <span className="text-[10px] text-secondaryText block truncate font-mono">
                 {user?.email || 'alex@nodebeacon.net'}
               </span>
             </div>
-            <button 
+            <button
               onClick={logout}
               className="text-secondaryText hover:text-danger p-1.5 rounded-lg transition-colors duration-150 cursor-pointer hover:bg-danger/10"
               title="Sign Out"

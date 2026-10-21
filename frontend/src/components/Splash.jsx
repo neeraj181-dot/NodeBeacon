@@ -40,7 +40,7 @@ export default function Splash({ onFinish }) {
   return (
     <div className={`fixed inset-0 bg-[#070707] z-50 flex flex-col items-center justify-center transition-opacity duration-400 select-none ${fade ? 'opacity-0' : 'opacity-100'}`}>
       <div className="flex flex-col items-center gap-8 max-w-sm w-full px-6">
-        
+
         {/* Pulsing Logo (72px) */}
         <div className="animate-pulse duration-1000">
           <Logo size={72} showGlow={true} />
@@ -53,7 +53,7 @@ export default function Splash({ onFinish }) {
 
           {/* Animated Loading Bar */}
           <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden border border-white/5">
-            <div 
+            <div
               className="h-full bg-accent transition-all duration-100 ease-out shadow-[0_0_8px_#57E389]"
               style={{ width: `${progress}%` }}
             ></div>

@@ -24,7 +24,7 @@ export default function AlertsTab() {
     const description = alert.description || '';
     const title = alert.title || '';
     const query = searchQuery.toLowerCase();
-    
+
     return (
       serverName.toLowerCase().includes(query) ||
       description.toLowerCase().includes(query) ||
@@ -53,7 +53,7 @@ export default function AlertsTab() {
 
   return (
     <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-background text-white select-none">
-      
+
       {/* Title */}
       <div className="flex justify-between items-center">
         <div>
@@ -132,13 +132,12 @@ export default function AlertsTab() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               key={alert.id}
-              className={`p-5 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all duration-300 ${
-                alert.status === 'Resolved' 
-                  ? 'bg-white/[0.01] border-white/5 opacity-60' 
-                  : alert.severity === 'Critical' 
-                    ? 'bg-danger/[0.02] border-danger/10 hover:border-danger/20 shadow-[0_0_20px_rgba(255,95,87,0.02)]' 
+              className={`p-5 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all duration-300 ${alert.status === 'Resolved'
+                  ? 'bg-white/[0.01] border-white/5 opacity-60'
+                  : alert.severity === 'Critical'
+                    ? 'bg-danger/[0.02] border-danger/10 hover:border-danger/20 shadow-[0_0_20px_rgba(255,95,87,0.02)]'
                     : 'bg-warning/[0.02] border-warning/10 hover:border-warning/20'
-              }`}
+                }`}
             >
               <div className="flex items-start gap-4 flex-1">
                 {alert.status === 'Resolved' ? (
@@ -146,13 +145,12 @@ export default function AlertsTab() {
                     <CheckCircle className="w-4 h-4" />
                   </div>
                 ) : (
-                  <div className={`p-2 rounded-xl shrink-0 mt-0.5 border ${
-                    alert.severity === 'Critical' ? 'bg-danger/10 border-danger/20 text-danger' : 'bg-warning/10 border-warning/20 text-warning'
-                  }`}>
+                  <div className={`p-2 rounded-xl shrink-0 mt-0.5 border ${alert.severity === 'Critical' ? 'bg-danger/10 border-danger/20 text-danger' : 'bg-warning/10 border-warning/20 text-warning'
+                    }`}>
                     <ShieldAlert className="w-4 h-4" />
                   </div>
                 )}
-                
+
                 <div className="space-y-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-xs font-bold text-white font-mono uppercase truncate">
@@ -164,16 +162,15 @@ export default function AlertsTab() {
                     <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border ${getSeverityStyle(alert.severity)}`}>
                       {alert.severity}
                     </span>
-                    <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border ${
-                      alert.status === 'Resolved' ? 'bg-accent/10 border-accent/20 text-accent' : 'bg-danger/10 border-danger/20 text-danger'
-                    }`}>
+                    <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border ${alert.status === 'Resolved' ? 'bg-accent/10 border-accent/20 text-accent' : 'bg-danger/10 border-danger/20 text-danger'
+                      }`}>
                       {alert.status}
                     </span>
                   </div>
-                  
+
                   <h4 className="text-xs font-bold text-white uppercase font-mono tracking-wide pt-0.5">{alert.title}</h4>
                   <p className="text-xs text-secondaryText leading-relaxed max-w-2xl">{alert.description}</p>
-                  
+
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-[10px] text-secondaryText font-mono">
                     <Clock className="w-3 h-3" />
                     <span>Started: {new Date(alert.created_at).toLocaleString()}</span>

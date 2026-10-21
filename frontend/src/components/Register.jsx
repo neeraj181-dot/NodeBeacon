@@ -97,7 +97,7 @@ export default function Register({ onRegister, onNavigate }) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
             {/* Individual Card */}
-            <div 
+            <div
               onClick={() => setAccountType('INDIVIDUAL')}
               className="glass-panel p-8 rounded-2xl flex flex-col justify-between h-72 border border-white/5 hover:border-accent/40 hover:shadow-[0_0_30px_rgba(87,227,137,0.06)] transition-all duration-300 cursor-pointer text-center group"
             >
@@ -118,7 +118,7 @@ export default function Register({ onRegister, onNavigate }) {
             </div>
 
             {/* Organization Card */}
-            <div 
+            <div
               onClick={() => setAccountType('ORGANIZATION')}
               className="glass-panel p-8 rounded-2xl flex flex-col justify-between h-72 border border-white/5 hover:border-accent/40 hover:shadow-[0_0_30px_rgba(87,227,137,0.06)] transition-all duration-300 cursor-pointer text-center group"
             >
@@ -149,14 +149,14 @@ export default function Register({ onRegister, onNavigate }) {
           </Link>
         </div>
       ) : (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 15, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.5 }}
           className="relative z-10 w-full max-w-[460px] bg-[#0c0c0c]/90 backdrop-blur-[24px] border border-[#57E389]/25 p-8 rounded-[28px] space-y-5 shadow-[0_0_50px_rgba(87,227,137,0.08)]"
         >
           {/* Back button */}
-          <button 
+          <button
             onClick={() => { setAccountType(null); setLocalError(''); }}
             className="text-[10px] font-bold text-secondaryText hover:text-white uppercase tracking-wider font-mono"
           >
@@ -181,14 +181,14 @@ export default function Register({ onRegister, onNavigate }) {
               <>
                 <div className="space-y-1">
                   <label className="text-[9px] font-bold text-secondaryText uppercase tracking-wider block font-mono">Full Name</label>
-                  <input 
+                  <input
                     type="text" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Alex Rivera"
                     className="w-full h-10 bg-[#121212]/80 border border-white/5 rounded-xl px-4 text-xs text-white focus:outline-none focus:border-accent/40"
                   />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[9px] font-bold text-secondaryText uppercase tracking-wider block font-mono">Email Address</label>
-                  <input 
+                  <input
                     type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="alex@nodebeacon.net"
                     className="w-full h-10 bg-[#121212]/80 border border-white/5 rounded-xl px-4 text-xs text-white focus:outline-none focus:border-accent/40"
                   />
@@ -198,7 +198,7 @@ export default function Register({ onRegister, onNavigate }) {
               <>
                 <div className="space-y-1">
                   <label className="text-[9px] font-bold text-secondaryText uppercase tracking-wider block font-mono">Organization Name</label>
-                  <input 
+                  <input
                     type="text" required value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="ABC Technologies"
                     className="w-full h-10 bg-[#121212]/80 border border-white/5 rounded-xl px-4 text-xs text-white focus:outline-none focus:border-accent/40"
                   />
@@ -206,14 +206,14 @@ export default function Register({ onRegister, onNavigate }) {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-[9px] font-bold text-secondaryText uppercase tracking-wider block font-mono">Administrator Name</label>
-                    <input 
+                    <input
                       type="text" required value={adminName} onChange={(e) => setAdminName(e.target.value)} placeholder="Alex Rivera"
                       className="w-full h-10 bg-[#121212]/80 border border-white/5 rounded-xl px-4 text-xs text-white focus:outline-none focus:border-accent/40"
                     />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[9px] font-bold text-secondaryText uppercase tracking-wider block font-mono">Administrator Email</label>
-                    <input 
+                    <input
                       type="email" required value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} placeholder="admin@company.com"
                       className="w-full h-10 bg-[#121212]/80 border border-white/5 rounded-xl px-4 text-xs text-white focus:outline-none focus:border-accent/40"
                     />
@@ -221,7 +221,7 @@ export default function Register({ onRegister, onNavigate }) {
                 </div>
                 <div className="space-y-1">
                   <label className="text-[9px] font-bold text-secondaryText uppercase tracking-wider block font-mono">Alert Email</label>
-                  <input 
+                  <input
                     type="email" required value={alertEmail} onChange={(e) => setAlertEmail(e.target.value)} placeholder="alerts@company.com"
                     className="w-full h-10 bg-[#121212]/80 border border-white/5 rounded-xl px-4 text-xs text-white focus:outline-none focus:border-accent/40"
                   />
@@ -232,21 +232,21 @@ export default function Register({ onRegister, onNavigate }) {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-[9px] font-bold text-secondaryText uppercase tracking-wider block font-mono">Password</label>
-                <input 
+                <input
                   type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••"
                   className="w-full h-10 bg-[#121212]/80 border border-white/5 rounded-xl px-4 text-xs text-white focus:outline-none focus:border-accent/40"
                 />
               </div>
               <div className="space-y-1">
                 <label className="text-[9px] font-bold text-secondaryText uppercase tracking-wider block font-mono">Confirm Password</label>
-                <input 
+                <input
                   type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••"
                   className="w-full h-10 bg-[#121212]/80 border border-white/5 rounded-xl px-4 text-xs text-white focus:outline-none focus:border-accent/40"
                 />
               </div>
             </div>
 
-            <button 
+            <button
               type="submit" disabled={submitting}
               className="w-full h-10 bg-[#57E389] hover:bg-[#57E389]/95 text-black font-bold rounded-xl text-xs uppercase tracking-wider hover:shadow-[0_0_25px_rgba(87,227,137,0.35)] mt-4 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
             >

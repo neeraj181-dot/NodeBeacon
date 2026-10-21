@@ -70,6 +70,26 @@ class TelegramPairingTests(APITestCase):
         self.assertEqual(self.user.telegram_chat_id, '7431')
         self.assertFalse(TelegramPairing.objects.filter(user=self.user).exists())
 
+    @patch('users.telegram_service._api')
+    def test_bare_start_message_pairs_verifying_owner(self, api):
+        api.side_effect = [
+            {'username': 'NodeBeaconTestBot'},
+        ]
+        self.client.post(reverse('telegram_connect_start'), {}, format='json')
+        api.side_effect = [
+            [{'update_id': 50, 'message': {
+                'text': '/start',
+                'from': {'id': 9988},
+                'chat': {'id': 9988, 'type': 'private'},
+            }}],
+            {'message_id': 999},
+        ]
+        response = self.client.post(reverse('telegram_connect_verify'), {}, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.telegram_chat_id, '9988')
+        self.assertFalse(TelegramPairing.objects.filter(user=self.user).exists())
+
     @patch('users.telegram_service._api', return_value=[])
     def test_unmatched_or_group_start_does_not_connect_chat(self, _api):
         _api.side_effect = [{'username': 'NodeBeaconTestBot'}, []]

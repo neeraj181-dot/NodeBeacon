@@ -22,32 +22,36 @@
   --color-blue: #5B8CFF;
   --color-secondaryText: #8A8A8A;
   --color-foreground: #ffffff;
-  --chart-grid: rgba(255,255,255,0.08);
-  --chart-label: rgba(255,255,255,0.58);
+  --chart-grid: rgba(255, 255, 255, 0.08);
+  --chart-label: rgba(255, 255, 255, 0.58);
   --chart-tooltip: #101010;
-  
+
   --font-sans: 'Inter', 'Geist', sans-serif;
 }
 
 html[data-theme='light'] {
   color-scheme: light;
-  --color-background: #f3f6f4;
-  --color-surface: #ffffff;
-  --color-card: #ffffff;
-  --color-hover: #e7eee9;
-  --color-accent: #168841;
-  --color-danger: #c42d2a;
-  --color-warning: #8a5600;
-  --color-blue: #245fc2;
-  --color-secondaryText: #536158;
-  --color-foreground: #17251c;
-  --chart-grid: rgba(23,37,28,0.14);
-  --chart-label: rgba(23,37,28,0.68);
-  --chart-tooltip: #ffffff;
+  --color-background: #F5FAF6;
+  --color-surface: rgba(255, 255, 255, 0.85);
+  --color-card: rgba(255, 255, 255, 0.92);
+  --color-hover: #EAF7EF;
+  --color-border: #D9E8DD;
+  --color-accent: #12834A;
+  --color-accent-hover: #169E5B;
+  --color-danger: #F87171;
+  --color-warning: #D97706;
+  --color-blue: #2563EB;
+  --color-secondaryText: #4E6B5A;
+  --color-foreground: #11261B;
+  --chart-grid: rgba(18, 50, 32, 0.08);
+  --chart-label: #526E5D;
+  --chart-tooltip: #FFFFFF;
 }
 
 /* Explicit CSS rules to guarantee dark mode rendering even without utility processing */
-html, body, #root {
+html,
+body,
+#root {
   background-color: #070707 !important;
   color: #ffffff !important;
   margin: 0;
@@ -58,68 +62,323 @@ html, body, #root {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Ensure the NodeBeacon logo badge remains in a dark graphite container with emerald glow in both themes */
+.nodebeacon-logo-badge {
+  background-color: #111714 !important;
+  border-color: #303D35 !important;
+}
+
+/* --- LIGHT THEME (Arcade Modern Mint SaaS Redesign) --- */
 html[data-theme='light'],
 html[data-theme='light'] body,
 html[data-theme='light'] #root {
-  background-color: #f3f6f4 !important;
-  color: #17251c !important;
+  background: radial-gradient(120% 120% at 50% 0%, #EAF7EF 0%, #F5FAF6 52%, #E1F4E9 100%) fixed !important;
+  color: #11261B !important;
 }
 
-html[data-theme='light'] [class*='bg-[#050505]'],
-html[data-theme='light'] [class*='bg-[#070707]'],
-html[data-theme='light'] [class*='bg-[#0c0c0c]'],
-html[data-theme='light'] [class*='bg-[#101010]'],
-html[data-theme='light'] [class*='bg-[#111111]'],
-html[data-theme='light'] [class*='bg-[#121212]'],
-html[data-theme='light'] [class*='bg-[#151515]'],
+/* Allow the continuous soft mint background gradient to shine through app layouts */
+html[data-theme='light'] .bg-background,
+html[data-theme='light'] [class*='bg-background'] {
+  background: transparent !important;
+}
+
+html[data-theme='light'] .flex-1[class*='bg-[#050505]'] {
+  background: transparent !important;
+}
+
+/* Glass-like white cards & surfaces with soft ambient mint/emerald shadows & rounded corners */
+html[data-theme='light'] .bg-card,
+html[data-theme='light'] .glass-panel,
+html[data-theme='light'] .server-card,
 html[data-theme='light'] [class*='bg-[#161616]'],
 html[data-theme='light'] [class*='bg-[#171717]'],
-html[data-theme='light'] [class*='bg-[#1c1c1c]'] {
-  background-color: #ffffff !important;
+html[data-theme='light'] [class*='bg-[#1c1c1c]'],
+html[data-theme='light'] [class*='bg-[#121212]'],
+html[data-theme='light'] [class*='bg-[#111111]'],
+html[data-theme='light'] [class*='bg-[#0c0c0c]'],
+html[data-theme='light'] [class*='bg-[#101010]'] {
+  background: rgba(255, 255, 255, 0.92) !important;
+  backdrop-filter: blur(14px) saturate(130%) !important;
+  border: 1px solid #D9E8DD !important;
+  box-shadow: 0 4px 20px -2px rgba(18, 131, 74, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02) !important;
 }
 
-html[data-theme='light'] [class*='bg-white/'] {
-  background-color: rgb(32 65 43 / 5%) !important;
+/* Polished Google Auth button in Light Theme */
+html[data-theme='light'] #google-signin-btn {
+  background: #FFFFFF !important;
+  border: 1px solid #D9E8DD !important;
+  color: #11261B !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
 }
 
-html[data-theme='light'] [class*='text-white'] {
-  color: #17251c !important;
+html[data-theme='light'] #google-signin-btn:hover {
+  background: #EAF7EF !important;
+  border-color: rgba(18, 131, 74, 0.25) !important;
+}
+
+/* Autofill adjustments to match each theme smoothly */
+html[data-theme='light'] input:-webkit-autofill,
+html[data-theme='light'] input:-webkit-autofill:hover,
+html[data-theme='light'] input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px #F5FAF6 inset !important;
+  -webkit-text-fill-color: #11261B !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px #111714 inset !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Server card & glass panel hover */
+html[data-theme='light'] .server-card:hover,
+html[data-theme='light'] .glass-panel-hover:hover {
+  background: rgba(255, 255, 255, 0.98) !important;
+  border-color: rgba(18, 131, 74, 0.35) !important;
+  box-shadow: 0 8px 30px -4px rgba(18, 131, 74, 0.1), 0 2px 6px rgba(0, 0, 0, 0.03) !important;
+}
+
+/* Sidebar styling in Light Theme */
+html[data-theme='light'] aside {
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(16px) saturate(140%) !important;
+  border-right: 1px solid #D9E8DD !important;
+  box-shadow: 2px 0 16px rgba(18, 131, 74, 0.03) !important;
+}
+
+html[data-theme='light'] aside nav button {
+  color: #4E6B5A !important;
+}
+
+html[data-theme='light'] aside nav button:hover {
+  color: #11261B !important;
+  background-color: rgba(18, 131, 74, 0.06) !important;
+}
+
+html[data-theme='light'] aside nav button[class*='text-accent'] {
+  background: rgba(18, 131, 74, 0.09) !important;
+  border: 1px solid rgba(18, 131, 74, 0.22) !important;
+  color: #12834A !important;
+  box-shadow: 0 2px 8px rgba(18, 131, 74, 0.05) !important;
+}
+
+html[data-theme='light'] aside nav button[class*='text-accent'] svg {
+  color: #12834A !important;
+}
+
+html[data-theme='light'] aside nav button[class*='text-accent'] span {
+  color: #12834A !important;
+  font-weight: 700 !important;
+}
+
+/* Header/Navbar styling in Light Theme */
+html[data-theme='light'] header {
+  background: rgba(255, 255, 255, 0.88) !important;
+  backdrop-filter: blur(16px) saturate(140%) !important;
+  border-bottom: 1px solid #D9E8DD !important;
+  box-shadow: 0 2px 14px rgba(18, 131, 74, 0.03) !important;
+}
+
+html[data-theme='light'] header input {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid #D9E8DD !important;
+  color: #11261B !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02) !important;
+}
+
+html[data-theme='light'] header input:focus {
+  border-color: #12834A !important;
+  box-shadow: 0 0 0 3px rgba(18, 131, 74, 0.12) !important;
+}
+
+/* Action buttons: Primary emerald button has white text */
+html[data-theme='light'] button[class*='bg-accent'],
+html[data-theme='light'] a[class*='bg-accent'],
+html[data-theme='light'] .btn-accent {
+  background-color: #12834A !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 14px rgba(18, 131, 74, 0.25) !important;
+}
+
+html[data-theme='light'] button[class*='bg-accent']:hover,
+html[data-theme='light'] a[class*='bg-accent']:hover {
+  background-color: #169E5B !important;
+  color: #FFFFFF !important;
+}
+
+html[data-theme='light'] button[class*='bg-accent'] svg,
+html[data-theme='light'] button[class*='bg-accent'] span {
+  color: #FFFFFF !important;
+}
+
+/* Secondary icon buttons & theme toggle */
+html[data-theme='light'] button[aria-label*='mode'],
+html[data-theme='light'] header button[title='Open alerts'] {
+  background: rgba(255, 255, 255, 0.85) !important;
+  border: 1px solid #D9E8DD !important;
+  color: #4E6B5A !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+}
+
+html[data-theme='light'] button[aria-label*='mode']:hover,
+html[data-theme='light'] header button[title='Open alerts']:hover {
+  color: #12834A !important;
+  border-color: rgba(18, 131, 74, 0.3) !important;
+  background: rgba(18, 131, 74, 0.06) !important;
+}
+
+/* Text overrides in Light Theme */
+html[data-theme='light'] [class*='text-white']:not(.nodebeacon-logo-badge [class*='text-white']):not(.notification-badge):not(.notification-badge *) {
+  color: #11261B !important;
+}
+
+/* Notification Alert Badge in Light Theme: Soft / Slight Red with crisp white number and clean white border */
+@keyframes soft-red-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(248, 113, 113, 0.2);
+  }
+}
+
+html[data-theme='light'] .notification-badge,
+html[data-theme='light'] header .notification-badge,
+html[data-theme='light'] header span[class*='bg-danger'] {
+  background-color: #F87171 !important;
+  color: #FFFFFF !important;
+  border: 1.5px solid #FFFFFF !important;
+  animation: soft-red-pulse 2.5s ease-in-out infinite !important;
+}
+
+html[data-theme='light'] .notification-badge,
+html[data-theme='light'] .notification-badge * {
+  color: #FFFFFF !important;
+}
+
+html[data-theme='light'] [class*='text-secondaryText'] {
+  color: #4E6B5A !important;
 }
 
 html[data-theme='light'] [class*='border-white'] {
-  border-color: rgb(23 37 28 / 13%) !important;
+  border-color: #D9E8DD !important;
+}
+
+html[data-theme='light'] [class*='bg-white/'] {
+  background-color: rgba(18, 131, 74, 0.06) !important;
 }
 
 html[data-theme='light'] [class*='text-[#070707]'],
+html[data-theme='light'] [class*='text-[#072111]'],
 html[data-theme='light'] [class~='text-black'] {
-  color: #082a15 !important;
+  color: #11261B !important;
 }
 
+/* Ensure white text inside accent buttons is preserved */
+html[data-theme='light'] button[class*='bg-accent'] [class*='text-[#070707]'],
+html[data-theme='light'] button[class*='bg-accent'] [class*='text-[#072111]'],
+html[data-theme='light'] button[class*='bg-accent'] span,
+html[data-theme='light'] button[class*='bg-accent'] svg {
+  color: #FFFFFF !important;
+}
+
+/* Inputs, Textareas, Selects */
 html[data-theme='light'] input:not([type='checkbox']):not([type='radio']),
 html[data-theme='light'] textarea,
 html[data-theme='light'] select {
-  background-color: #ffffff !important;
-  color: #17251c !important;
-  border-color: rgb(23 37 28 / 20%) !important;
+  background-color: #FFFFFF !important;
+  color: #11261B !important;
+  border: 1px solid #D9E8DD !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02) !important;
+}
+
+html[data-theme='light'] input:not([type='checkbox']):not([type='radio']):focus,
+html[data-theme='light'] textarea:focus,
+html[data-theme='light'] select:focus {
+  border-color: #12834A !important;
+  box-shadow: 0 0 0 3px rgba(18, 131, 74, 0.12) !important;
+  outline: none !important;
 }
 
 html[data-theme='light'] input::placeholder,
 html[data-theme='light'] textarea::placeholder {
-  color: #69756c !important;
+  color: #526E5D !important;
 }
 
-html[data-theme='light'] .glass-panel,
-html[data-theme='light'] .server-card {
-  background: rgb(255 255 255 / 94%) !important;
-  border-color: rgb(23 37 28 / 12%) !important;
+/* Modals & Dialogs */
+html[data-theme='light'] .fixed.inset-0.bg-black\/60,
+html[data-theme='light'] .fixed.inset-0[class*='bg-black'] {
+  background-color: rgba(17, 38, 27, 0.35) !important;
+  backdrop-filter: blur(8px) !important;
 }
 
+html[data-theme='light'] .fixed [class*='bg-[#121212]'],
+html[data-theme='light'] .fixed [class*='bg-[#101010]'],
+html[data-theme='light'] .fixed [class*='bg-[#111111]'],
+html[data-theme='light'] .fixed [class*='bg-[#161616]'] {
+  background-color: rgba(255, 255, 255, 0.98) !important;
+  border: 1px solid #D9E8DD !important;
+  box-shadow: 0 20px 50px -10px rgba(18, 131, 74, 0.15) !important;
+}
+
+/* Dropdowns & Popovers */
+html[data-theme='light'] .absolute[class*='bg-[#121212]'],
+html[data-theme='light'] .absolute[class*='bg-[#101010]'] {
+  background-color: #FFFFFF !important;
+  border: 1px solid #D9E8DD !important;
+  box-shadow: 0 10px 25px -5px rgba(18, 131, 74, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+html[data-theme='light'] .absolute button {
+  color: #11261B !important;
+}
+
+html[data-theme='light'] .absolute button:hover {
+  background-color: rgba(18, 131, 74, 0.06) !important;
+}
+
+/* Auth pages (Login, Register, Forgot Password) */
 html[data-theme='light'] .bg-register {
-  background: radial-gradient(circle at 30% 30%, rgb(20 150 75 / 8%), #f3f6f4 70%) !important;
+  background: radial-gradient(120% 120% at 50% 0%, #EAF7EF 0%, #F5FAF6 52%, #E1F4E9 100%) !important;
 }
 
-html[data-theme='light'] ::-webkit-scrollbar-track { background: #eef2ef; }
-html[data-theme='light'] ::-webkit-scrollbar-thumb { background: #c8d2cb; }
+html[data-theme='light'] .bg-register .grid-overlay {
+  background-image: linear-gradient(rgba(18, 131, 74, 0.05) 1px, transparent),
+    linear-gradient(90deg, rgba(18, 131, 74, 0.05) 1px, transparent) !important;
+}
+
+html[data-theme='light'] .bg-register [class*='bg-[#050505]'] {
+  background: transparent !important;
+}
+
+html[data-theme='light'] .bg-register [class*='bg-[#0c0c0c]'] {
+  background: rgba(255, 255, 255, 0.94) !important;
+  border: 1px solid #D9E8DD !important;
+  box-shadow: 0 12px 40px -10px rgba(18, 131, 74, 0.08), 0 2px 10px rgba(0, 0, 0, 0.03) !important;
+}
+
+html[data-theme='light'] .bg-register [class*='bg-card/40'] {
+  background: rgba(255, 255, 255, 0.88) !important;
+  border: 1px solid #D9E8DD !important;
+  box-shadow: 0 4px 16px -2px rgba(18, 131, 74, 0.05) !important;
+}
+
+/* Scrollbars in Light Theme */
+html[data-theme='light'] ::-webkit-scrollbar-track {
+  background: #EAF7EF;
+}
+
+html[data-theme='light'] ::-webkit-scrollbar-thumb {
+  background: #C2DAC9;
+  border-radius: 3px;
+}
+
+html[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
+  background: #A5C7AE;
+}
 
 /* Custom scrollbar matching premium theme */
 ::-webkit-scrollbar {
@@ -142,53 +401,129 @@ html[data-theme='light'] ::-webkit-scrollbar-thumb { background: #c8d2cb; }
 
 /* Custom CSS keyframe animations for NodeBeacon cyber-theme */
 @keyframes pulse-slow {
-  0%, 100% { opacity: 0.3; transform: scale(1); }
-  50% { opacity: 0.7; transform: scale(1.08); }
+
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.7;
+    transform: scale(1.08);
+  }
 }
 
 @keyframes wave-slow {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
 }
 
 @keyframes wave-fast {
-  0% { transform: translateX(-50%); }
-  100% { transform: translateX(0); }
+  0% {
+    transform: translateX(-50%);
+  }
+
+  100% {
+    transform: translateX(0);
+  }
 }
 
 @keyframes float-particle-1 {
-  0%, 100% { transform: translateY(0) translateX(0); opacity: 0.2; }
-  50% { transform: translateY(-40px) translateX(20px); opacity: 0.6; }
+
+  0%,
+  100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.2;
+  }
+
+  50% {
+    transform: translateY(-40px) translateX(20px);
+    opacity: 0.6;
+  }
 }
 
 @keyframes float-particle-2 {
-  0%, 100% { transform: translateY(0) translateX(0); opacity: 0.15; }
-  50% { transform: translateY(-60px) translateX(-30px); opacity: 0.5; }
+
+  0%,
+  100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.15;
+  }
+
+  50% {
+    transform: translateY(-60px) translateX(-30px);
+    opacity: 0.5;
+  }
 }
 
 @keyframes float-particle-3 {
-  0%, 100% { transform: translateY(0) translateX(0); opacity: 0.3; }
-  50% { transform: translateY(-30px) translateX(15px); opacity: 0.7; }
+
+  0%,
+  100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.3;
+  }
+
+  50% {
+    transform: translateY(-30px) translateX(15px);
+    opacity: 0.7;
+  }
 }
 
 @keyframes float-particle-4 {
-  0%, 100% { transform: translateY(0) translateX(0); opacity: 0.1; }
-  50% { transform: translateY(-50px) translateX(-10px); opacity: 0.4; }
+
+  0%,
+  100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.1;
+  }
+
+  50% {
+    transform: translateY(-50px) translateX(-10px);
+    opacity: 0.4;
+  }
 }
 
 @keyframes float-particle-5 {
-  0%, 100% { transform: translateY(0) translateX(0); opacity: 0.25; }
-  50% { transform: translateY(-40px) translateX(-20px); opacity: 0.6; }
+
+  0%,
+  100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.25;
+  }
+
+  50% {
+    transform: translateY(-40px) translateX(-20px);
+    opacity: 0.6;
+  }
 }
 
 @keyframes neon-pulse {
-  0%, 100% { box-shadow: 0 0 5px rgba(87, 227, 137, 0.1), 0 0 10px rgba(87, 227, 137, 0.05); }
-  50% { box-shadow: 0 0 15px rgba(87, 227, 137, 0.3), 0 0 30px rgba(87, 227, 137, 0.15); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 5px rgba(87, 227, 137, 0.1), 0 0 10px rgba(87, 227, 137, 0.05);
+  }
+
+  50% {
+    box-shadow: 0 0 15px rgba(87, 227, 137, 0.3), 0 0 30px rgba(87, 227, 137, 0.15);
+  }
 }
 
 @keyframes scanline {
-  0% { transform: translateY(-100%); }
-  100% { transform: translateY(100%); }
+  0% {
+    transform: translateY(-100%);
+  }
+
+  100% {
+    transform: translateY(100%);
+  }
 }
 
 .animate-pulse-slow {
@@ -251,7 +586,7 @@ html[data-theme='light'] ::-webkit-scrollbar-thumb { background: #c8d2cb; }
   position: relative;
   overflow: hidden;
   background: #050505;
-  background: radial-gradient(circle at 30% 30%, rgba(0,255,0,0.12), #050505 70%);
+  background: radial-gradient(circle at 30% 30%, rgba(0, 255, 0, 0.12), #050505 70%);
 }
 
 /* Neon wave effect */
@@ -260,7 +595,7 @@ html[data-theme='light'] ::-webkit-scrollbar-thumb { background: #c8d2cb; }
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(120deg, transparent, rgba(0,255,0,0.2) 50%, transparent);
+  background: linear-gradient(120deg, transparent, rgba(0, 255, 0, 0.2) 50%, transparent);
   animation: wave-slow 18s linear infinite;
   mix-blend-mode: screen;
 }
@@ -271,8 +606,8 @@ html[data-theme='light'] ::-webkit-scrollbar-thumb { background: #c8d2cb; }
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(circle, rgba(0,255,0,0.15) 2px, transparent 2px),
-              radial-gradient(circle, rgba(0,255,0,0.15) 2px, transparent 2px);
+  background: radial-gradient(circle, rgba(0, 255, 0, 0.15) 2px, transparent 2px),
+    radial-gradient(circle, rgba(0, 255, 0, 0.15) 2px, transparent 2px);
   background-size: 30px 30px, 20px 20px;
   animation: float-particle-1 12s ease-in-out infinite, float-particle-2 14s ease-in-out infinite;
   opacity: 0.6;
@@ -283,16 +618,16 @@ html[data-theme='light'] ::-webkit-scrollbar-thumb { background: #c8d2cb; }
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background-image: linear-gradient(rgba(255,255,255,0.04) 1px, transparent),
-                    linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent);
+  background-image: linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent);
   background-size: 20px 20px;
   mix-blend-mode: overlay;
 }
 
 .server-card {
-  background: rgba(18,18,18,0.75);
+  background: rgba(18, 18, 18, 0.75);
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 0.75rem;
   position: relative;
   overflow: hidden;
@@ -302,23 +637,25 @@ html[data-theme='light'] ::-webkit-scrollbar-thumb { background: #c8d2cb; }
 }
 
 .server-card:hover {
-  border-color: rgba(255,255,255,0.12);
-  background: rgba(24,24,24,0.85);
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(24, 24, 24, 0.85);
 }
 
 .metric-bar {
   display: flex;
   flex-direction: column;
 }
+
 .metric-bar .text-xs {
   margin-bottom: 2px;
 }
+
 .metric-bar .bg-accent {
   background: var(--color-accent);
 }
 
 .metric-chip {
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.08);
   color: #F4F4F4;
   padding: 2px 6px;
   border-radius: 0.375rem;
@@ -342,13 +679,24 @@ html[data-theme='light'] ::-webkit-scrollbar-thumb { background: #c8d2cb; }
 
 .card-action-btn:hover {
   transform: scale(1.04);
-  box-shadow: 0 0 12px rgba(87,227,137,0.6);
+  box-shadow: 0 0 12px rgba(87, 227, 137, 0.6);
 }
 
 @keyframes pulse {
-  0% { opacity: 0.8; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.06); }
-  100% { opacity: 0.8; transform: scale(1); }
+  0% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+
+  100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
 }
 
 .online-badge.online {
@@ -356,23 +704,46 @@ html[data-theme='light'] ::-webkit-scrollbar-thumb { background: #c8d2cb; }
 }
 
 .online-badge.offline {
-  background: rgba(255,0,0,0.15);
+  background: rgba(255, 0, 0, 0.15);
   color: #FF5F56;
 }
 
 /* Removed checkerboard pattern */
 
 @keyframes wave-slow {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 @keyframes float-particle-1 {
-  0%, 100% { transform: translateY(0) translateX(0); opacity: 0.2; }
-  50% { transform: translateY(-40px) translateX(20px); opacity: 0.6; }
+
+  0%,
+  100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.2;
+  }
+
+  50% {
+    transform: translateY(-40px) translateX(20px);
+    opacity: 0.6;
+  }
 }
 
 @keyframes float-particle-2 {
-  0%, 100% { transform: translateY(0) translateX(0); opacity: 0.15; }
-  50% { transform: translateY(-60px) translateX(-30px); opacity: 0.5; }
+
+  0%,
+  100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.15;
+  }
+
+  50% {
+    transform: translateY(-60px) translateX(-30px);
+    opacity: 0.5;
+  }
 }

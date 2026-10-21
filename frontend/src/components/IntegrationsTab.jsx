@@ -163,13 +163,14 @@ export default function IntegrationsTab() {
       await action();
     } catch (err) {
       const status = err.response?.status;
-      const message = name === 'test'
+      const backendMessage = err.response?.data?.message;
+      const message = backendMessage || (name === 'test'
         ? 'Failed to send test notification.'
         : name === 'verify' && status === 400
           ? 'Could not verify the chat. Open the latest Telegram link, press Start, then retry verification.'
           : name === 'connect' && status === 503
             ? 'Telegram could not be reached. Check the backend connection and retry.'
-            : 'Telegram request failed. Check the NodeBeacon connection and try again.';
+            : 'Telegram request failed. Check the NodeBeacon connection and try again.');
       setTelegramFeedback({ type: 'error', message });
     } finally {
       setTelegramBusy('');
@@ -369,8 +370,7 @@ export default function IntegrationsTab() {
               Email Notifications
             </h2>
             <div
-              className={`mt-2 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${
-                emailLoading
+              className={`mt-2 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${emailLoading
                   ? 'border-foreground/15 bg-foreground/5 text-secondaryText'
                   : isEmailConnected
                     ? 'border-accent/25 bg-accent/10 text-accent'
@@ -379,12 +379,11 @@ export default function IntegrationsTab() {
                       : isEmailError
                         ? 'border-danger/25 bg-danger/10 text-danger'
                         : 'border-foreground/15 bg-foreground/5 text-secondaryText'
-              }`}
+                }`}
               role="status"
             >
               <span
-                className={`h-1.5 w-1.5 rounded-full ${
-                  emailLoading
+                className={`h-1.5 w-1.5 rounded-full ${emailLoading
                     ? 'bg-current'
                     : isEmailConnected
                       ? 'bg-accent'
@@ -393,7 +392,7 @@ export default function IntegrationsTab() {
                         : isEmailError
                           ? 'bg-danger'
                           : 'bg-current'
-                }`}
+                  }`}
                 aria-hidden="true"
               />
               {emailLoading
@@ -467,13 +466,12 @@ export default function IntegrationsTab() {
           {/* Feedback Banner */}
           {emailFeedback.message && (
             <div
-              className={`mt-3 flex items-start gap-2 rounded-lg border p-3 text-xs leading-relaxed ${
-                emailFeedback.type === 'error'
+              className={`mt-3 flex items-start gap-2 rounded-lg border p-3 text-xs leading-relaxed ${emailFeedback.type === 'error'
                   ? 'border-danger/20 bg-danger/5 text-danger'
                   : emailFeedback.type === 'success'
                     ? 'border-accent/20 bg-accent/5 text-foreground'
                     : 'border-foreground/10 bg-foreground/[0.03] text-secondaryText'
-              }`}
+                }`}
               role={emailFeedback.type === 'error' ? 'alert' : 'status'}
               aria-live="polite"
             >
@@ -637,16 +635,14 @@ export default function IntegrationsTab() {
                 aria-checked={Boolean(isEmailConnected && email.notify_offline_email)}
                 onClick={() => handleEmailPreferenceToggle('notify_offline_email')}
                 disabled={!isEmailConnected || Boolean(emailBusy)}
-                className={`relative inline-flex h-7 w-16 shrink-0 items-center rounded-full border p-1 text-[9px] font-extrabold tracking-wide transition-[background-color,border-color,box-shadow] duration-200 ease-out hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50 ${
-                  isEmailConnected && email.notify_offline_email
+                className={`relative inline-flex h-7 w-16 shrink-0 items-center rounded-full border p-1 text-[9px] font-extrabold tracking-wide transition-[background-color,border-color,box-shadow] duration-200 ease-out hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50 ${isEmailConnected && email.notify_offline_email
                     ? 'border-accent bg-accent text-[#062112]'
                     : 'border-foreground/15 bg-foreground/10 text-secondaryText'
-                }`}
+                  }`}
               >
                 <span
-                  className={`absolute top-1/2 z-10 h-4 w-4 -translate-y-1/2 rounded-full bg-white shadow-sm transition-[left] duration-200 ease-out ${
-                    isEmailConnected && email.notify_offline_email ? 'left-[43px]' : 'left-1'
-                  }`}
+                  className={`absolute top-1/2 z-10 h-4 w-4 -translate-y-1/2 rounded-full bg-white shadow-sm transition-[left] duration-200 ease-out ${isEmailConnected && email.notify_offline_email ? 'left-[43px]' : 'left-1'
+                    }`}
                   aria-hidden="true"
                 />
                 <span className={`absolute inset-y-0 flex items-center ${isEmailConnected && email.notify_offline_email ? 'left-2' : 'right-2'}`}>
@@ -668,16 +664,14 @@ export default function IntegrationsTab() {
                 aria-checked={Boolean(isEmailConnected && email.notify_critical_email)}
                 onClick={() => handleEmailPreferenceToggle('notify_critical_email')}
                 disabled={!isEmailConnected || Boolean(emailBusy)}
-                className={`relative inline-flex h-7 w-16 shrink-0 items-center rounded-full border p-1 text-[9px] font-extrabold tracking-wide transition-[background-color,border-color,box-shadow] duration-200 ease-out hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50 ${
-                  isEmailConnected && email.notify_critical_email
+                className={`relative inline-flex h-7 w-16 shrink-0 items-center rounded-full border p-1 text-[9px] font-extrabold tracking-wide transition-[background-color,border-color,box-shadow] duration-200 ease-out hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50 ${isEmailConnected && email.notify_critical_email
                     ? 'border-accent bg-accent text-[#062112]'
                     : 'border-foreground/15 bg-foreground/10 text-secondaryText'
-                }`}
+                  }`}
               >
                 <span
-                  className={`absolute top-1/2 z-10 h-4 w-4 -translate-y-1/2 rounded-full bg-white shadow-sm transition-[left] duration-200 ease-out ${
-                    isEmailConnected && email.notify_critical_email ? 'left-[43px]' : 'left-1'
-                  }`}
+                  className={`absolute top-1/2 z-10 h-4 w-4 -translate-y-1/2 rounded-full bg-white shadow-sm transition-[left] duration-200 ease-out ${isEmailConnected && email.notify_critical_email ? 'left-[43px]' : 'left-1'
+                    }`}
                   aria-hidden="true"
                 />
                 <span className={`absolute inset-y-0 flex items-center ${isEmailConnected && email.notify_critical_email ? 'left-2' : 'right-2'}`}>
@@ -699,16 +693,14 @@ export default function IntegrationsTab() {
                 aria-checked={Boolean(isEmailConnected && email.notify_on_laptop_unlock)}
                 onClick={() => handleEmailPreferenceToggle('notify_on_laptop_unlock')}
                 disabled={!isEmailConnected || Boolean(emailBusy)}
-                className={`relative inline-flex h-7 w-16 shrink-0 items-center rounded-full border p-1 text-[9px] font-extrabold tracking-wide transition-[background-color,border-color,box-shadow] duration-200 ease-out hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50 ${
-                  isEmailConnected && email.notify_on_laptop_unlock
+                className={`relative inline-flex h-7 w-16 shrink-0 items-center rounded-full border p-1 text-[9px] font-extrabold tracking-wide transition-[background-color,border-color,box-shadow] duration-200 ease-out hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50 ${isEmailConnected && email.notify_on_laptop_unlock
                     ? 'border-accent bg-accent text-[#062112]'
                     : 'border-foreground/15 bg-foreground/10 text-secondaryText'
-                }`}
+                  }`}
               >
                 <span
-                  className={`absolute top-1/2 z-10 h-4 w-4 -translate-y-1/2 rounded-full bg-white shadow-sm transition-[left] duration-200 ease-out ${
-                    isEmailConnected && email.notify_on_laptop_unlock ? 'left-[43px]' : 'left-1'
-                  }`}
+                  className={`absolute top-1/2 z-10 h-4 w-4 -translate-y-1/2 rounded-full bg-white shadow-sm transition-[left] duration-200 ease-out ${isEmailConnected && email.notify_on_laptop_unlock ? 'left-[43px]' : 'left-1'
+                    }`}
                   aria-hidden="true"
                 />
                 <span className={`absolute inset-y-0 flex items-center ${isEmailConnected && email.notify_on_laptop_unlock ? 'left-2' : 'right-2'}`}>
@@ -777,13 +769,12 @@ export default function IntegrationsTab() {
 
           {telegramFeedback.message && (
             <div
-              className={`mt-3 flex items-start gap-2 rounded-lg border p-3 text-xs leading-relaxed ${
-                telegramFeedback.type === 'error'
+              className={`mt-3 flex items-start gap-2 rounded-lg border p-3 text-xs leading-relaxed ${telegramFeedback.type === 'error'
                   ? 'border-danger/20 bg-danger/5 text-danger'
                   : telegramFeedback.type === 'success'
                     ? 'border-accent/20 bg-accent/5 text-foreground'
                     : 'border-foreground/10 bg-foreground/[0.03] text-secondaryText'
-              }`}
+                }`}
               role={telegramFeedback.type === 'error' ? 'alert' : 'status'}
               aria-live="polite"
             >
@@ -887,16 +878,14 @@ export default function IntegrationsTab() {
                 aria-checked={Boolean(telegramConnected && telegram.notify_on_laptop_unlock_telegram)}
                 onClick={handleTelegramNotifyToggle}
                 disabled={!telegramConnected || Boolean(telegramBusy)}
-                className={`relative inline-flex h-7 w-16 shrink-0 items-center rounded-full border p-1 text-[9px] font-extrabold tracking-wide transition-[background-color,border-color,box-shadow] duration-200 ease-out hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-card disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none ${
-                  telegramConnected && telegram.notify_on_laptop_unlock_telegram
+                className={`relative inline-flex h-7 w-16 shrink-0 items-center rounded-full border p-1 text-[9px] font-extrabold tracking-wide transition-[background-color,border-color,box-shadow] duration-200 ease-out hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-card disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none ${telegramConnected && telegram.notify_on_laptop_unlock_telegram
                     ? 'border-accent bg-accent text-[#062112]'
                     : 'border-foreground/15 bg-foreground/10 text-secondaryText'
-                }`}
+                  }`}
               >
                 <span
-                  className={`absolute top-1/2 z-10 h-4 w-4 -translate-y-1/2 rounded-full bg-white shadow-sm transition-[left] duration-200 ease-out motion-reduce:transition-none ${
-                    telegramConnected && telegram.notify_on_laptop_unlock_telegram ? 'left-[43px]' : 'left-1'
-                  }`}
+                  className={`absolute top-1/2 z-10 h-4 w-4 -translate-y-1/2 rounded-full bg-white shadow-sm transition-[left] duration-200 ease-out motion-reduce:transition-none ${telegramConnected && telegram.notify_on_laptop_unlock_telegram ? 'left-[43px]' : 'left-1'
+                    }`}
                   aria-hidden="true"
                 />
                 <span className={`absolute inset-y-0 flex items-center ${telegramConnected && telegram.notify_on_laptop_unlock_telegram ? 'left-2' : 'right-2'}`}>

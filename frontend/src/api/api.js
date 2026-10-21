@@ -1,8 +1,15 @@
 import axios from 'axios';
 
-// Use Render backend in production, localhost in development
+// Use Render backend in production, matching localhost/127.0.0.1 in development
+const getDefaultApiUrl = () => {
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    return 'http://localhost:8000';
+  }
+  return 'http://127.0.0.1:8000';
+};
+
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+  import.meta.env.VITE_API_URL || getDefaultApiUrl();
 
 const api = axios.create({
   baseURL: `${API_BASE_URL}/api/`,

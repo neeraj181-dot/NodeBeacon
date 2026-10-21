@@ -3,11 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { getServer } from '../api/servers';
 import { getServerMetrics } from '../api/metrics';
-import { 
+import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line
 } from 'recharts';
-import { 
+import {
   Server, Cpu, Database, HardDrive, ShieldCheck, Activity, ArrowLeft, RefreshCw, Clock
 } from 'lucide-react';
 
@@ -28,7 +28,7 @@ export default function ServerDetailsTab({ serverId, onBack }) {
     try {
       const serverData = await getServer(activeServerId);
       setServer(serverData);
-      
+
       // Fetch up to 200 items of history
       const metricsData = await getServerMetrics(activeServerId, 200);
       // Reverse history data so that charts render chronologically (left to right)
@@ -77,7 +77,7 @@ export default function ServerDetailsTab({ serverId, onBack }) {
     const timestamp = new Date(m.timestamp);
     const now = new Date();
     const diffMs = now - timestamp;
-    
+
     if (timeRange === '1h') return diffMs <= 60 * 60 * 1000;
     if (timeRange === '24h') return diffMs <= 24 * 60 * 60 * 1000;
     if (timeRange === '7d') return diffMs <= 7 * 24 * 60 * 60 * 1000;
@@ -106,8 +106,8 @@ export default function ServerDetailsTab({ serverId, onBack }) {
   // Format uptime to human readable string
   const formatUptime = (seconds) => {
     if (!seconds) return '0h';
-    const d = Math.floor(seconds / (3600*24));
-    const h = Math.floor((seconds % (3600*24)) / 3600);
+    const d = Math.floor(seconds / (3600 * 24));
+    const h = Math.floor((seconds % (3600 * 24)) / 3600);
     const m = Math.floor((seconds % 3600) / 60);
     if (d > 0) return `${d}d ${h}h`;
     if (h > 0) return `${h}h ${m}m`;
@@ -135,7 +135,7 @@ export default function ServerDetailsTab({ serverId, onBack }) {
 
   return (
     <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-background text-white select-none">
-      
+
       {/* Header back navigation */}
       <div className="flex items-center gap-4">
         <button
@@ -147,9 +147,8 @@ export default function ServerDetailsTab({ serverId, onBack }) {
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-2xl font-bold tracking-tight text-white font-mono uppercase">{server.name}</h1>
-            <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
-              server.status === 'Online' ? 'bg-accent/15 border border-accent/20 text-accent' : 'bg-danger/15 border border-danger/20 text-danger'
-            }`}>
+            <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${server.status === 'Online' ? 'bg-accent/15 border border-accent/20 text-accent' : 'bg-danger/15 border border-danger/20 text-danger'
+              }`}>
               {server.status}
             </span>
           </div>
@@ -225,9 +224,8 @@ export default function ServerDetailsTab({ serverId, onBack }) {
             <button
               key={range}
               onClick={() => setTimeRange(range)}
-              className={`px-3 py-1 text-[10px] font-bold font-mono uppercase rounded-md transition-all cursor-pointer ${
-                timeRange === range ? 'bg-hover text-accent border border-white/5' : 'text-secondaryText hover:text-white'
-              }`}
+              className={`px-3 py-1 text-[10px] font-bold font-mono uppercase rounded-md transition-all cursor-pointer ${timeRange === range ? 'bg-hover text-accent border border-white/5' : 'text-secondaryText hover:text-white'
+                }`}
             >
               {range === '1h' ? 'Last Hour' : range === '24h' ? 'Last 24h' : 'Last 7 Days'}
             </button>
@@ -254,19 +252,19 @@ export default function ServerDetailsTab({ serverId, onBack }) {
                 <AreaChart data={chartData}>
                   <defs>
                     <linearGradient id="cpuColor" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#57E389" stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor="#57E389" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="var(--color-accent)" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="var(--color-accent)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
                   <XAxis dataKey="time" stroke="var(--chart-label)" fontSize={9} axisLine={false} tickLine={false} />
                   <YAxis stroke="var(--chart-label)" fontSize={9} axisLine={false} tickLine={false} domain={[0, 100]} />
-                  <Tooltip 
+                  <Tooltip
                     contentStyle={{ backgroundColor: 'var(--chart-tooltip)', color: 'var(--color-foreground)', border: '1px solid var(--chart-grid)', borderRadius: '8px' }}
-                    labelStyle={{ color: '#8A8A8A', fontFamily: 'monospace', fontSize: '9px' }}
-                    itemStyle={{ fontSize: '10px', color: '#fff' }}
+                    labelStyle={{ color: 'var(--chart-label)', fontFamily: 'monospace', fontSize: '9px' }}
+                    itemStyle={{ fontSize: '10px', color: 'var(--color-foreground)' }}
                   />
-                  <Area type="monotone" dataKey="CPU" stroke="#57E389" strokeWidth={1.5} fillOpacity={1} fill="url(#cpuColor)" />
+                  <Area type="monotone" dataKey="CPU" stroke="var(--color-accent)" strokeWidth={1.5} fillOpacity={1} fill="url(#cpuColor)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -280,19 +278,19 @@ export default function ServerDetailsTab({ serverId, onBack }) {
                 <AreaChart data={chartData}>
                   <defs>
                     <linearGradient id="ramColor" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#5B8CFF" stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor="#5B8CFF" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="var(--color-blue)" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="var(--color-blue)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
                   <XAxis dataKey="time" stroke="var(--chart-label)" fontSize={9} axisLine={false} tickLine={false} />
                   <YAxis stroke="var(--chart-label)" fontSize={9} axisLine={false} tickLine={false} domain={[0, 100]} />
-                  <Tooltip 
+                  <Tooltip
                     contentStyle={{ backgroundColor: 'var(--chart-tooltip)', color: 'var(--color-foreground)', border: '1px solid var(--chart-grid)', borderRadius: '8px' }}
-                    labelStyle={{ color: '#8A8A8A', fontFamily: 'monospace', fontSize: '9px' }}
-                    itemStyle={{ fontSize: '10px', color: '#fff' }}
+                    labelStyle={{ color: 'var(--chart-label)', fontFamily: 'monospace', fontSize: '9px' }}
+                    itemStyle={{ fontSize: '10px', color: 'var(--color-foreground)' }}
                   />
-                  <Area type="monotone" dataKey="RAM" stroke="#5B8CFF" strokeWidth={1.5} fillOpacity={1} fill="url(#ramColor)" />
+                  <Area type="monotone" dataKey="RAM" stroke="var(--color-blue)" strokeWidth={1.5} fillOpacity={1} fill="url(#ramColor)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -306,14 +304,14 @@ export default function ServerDetailsTab({ serverId, onBack }) {
                 <AreaChart data={chartData}>
                   <defs>
                     <linearGradient id="diskColor" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#FFFFFF" stopOpacity={0.06}/>
-                      <stop offset="95%" stopColor="#FFFFFF" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#FFFFFF" stopOpacity={0.06} />
+                      <stop offset="95%" stopColor="#FFFFFF" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
                   <XAxis dataKey="time" stroke="var(--chart-label)" fontSize={9} axisLine={false} tickLine={false} />
                   <YAxis stroke="var(--chart-label)" fontSize={9} axisLine={false} tickLine={false} domain={[0, 100]} />
-                  <Tooltip 
+                  <Tooltip
                     contentStyle={{ backgroundColor: 'var(--chart-tooltip)', color: 'var(--color-foreground)', border: '1px solid var(--chart-grid)', borderRadius: '8px' }}
                     labelStyle={{ color: 'var(--chart-label)', fontFamily: 'monospace', fontSize: '9px' }}
                     itemStyle={{ fontSize: '10px', color: 'var(--color-foreground)' }}
@@ -332,14 +330,14 @@ export default function ServerDetailsTab({ serverId, onBack }) {
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
                   <XAxis dataKey="time" stroke="var(--chart-label)" fontSize={9} axisLine={false} tickLine={false} />
-                  <YAxis 
+                  <YAxis
                     stroke="var(--chart-label)"
-                    fontSize={9} 
-                    axisLine={false} 
-                    tickLine={false} 
+                    fontSize={9}
+                    axisLine={false}
+                    tickLine={false}
                     tickFormatter={(v) => formatBytes(v)}
                   />
-                  <Tooltip 
+                  <Tooltip
                     contentStyle={{ backgroundColor: 'var(--chart-tooltip)', color: 'var(--color-foreground)', border: '1px solid var(--chart-grid)', borderRadius: '8px' }}
                     labelStyle={{ color: 'var(--chart-label)', fontFamily: 'monospace', fontSize: '9px' }}
                     itemStyle={{ fontSize: '10px', color: 'var(--color-foreground)' }}

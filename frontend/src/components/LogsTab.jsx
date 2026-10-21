@@ -25,7 +25,7 @@ export default function LogsTab() {
   // Add auto generator mock logs if auto refresh is active
   useEffect(() => {
     if (!autoRefresh || logs.length === 0) return;
-    
+
     const interval = setInterval(() => {
       const levels = ['INFO', 'WARNING', 'ERROR'];
       const servers = ['prod-api-01', 'prod-db-01', 'prod-api-02', 'prod-dns-01'];
@@ -66,7 +66,7 @@ export default function LogsTab() {
         </div>
         <div className="flex items-center gap-3">
           {/* Auto Refresh Toggle */}
-          <button 
+          <button
             onClick={() => setAutoRefresh(!autoRefresh)}
             className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 text-xs font-mono tracking-wider uppercase text-secondaryText hover:text-white transition-all cursor-pointer"
           >
@@ -90,7 +90,7 @@ export default function LogsTab() {
           </a>
 
           {/* Refresh Button */}
-          <button 
+          <button
             onClick={handleRefresh}
             disabled={loading}
             className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-accent text-[#070707] font-bold text-xs uppercase font-mono tracking-wider hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer shadow-[0_0_20px_rgba(87,227,137,0.15)] disabled:opacity-50"
@@ -106,7 +106,7 @@ export default function LogsTab() {
         <div className="flex-1 flex flex-col items-center justify-center p-12 py-24 glass-panel rounded-2xl max-w-xl mx-auto text-center space-y-6 relative overflow-hidden group">
           {/* Scanner glow lines */}
           <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_48%,rgba(87,227,137,0.1)_50%,transparent_52%)] bg-[size:100%_40px] opacity-10 animate-scanline pointer-events-none" />
-          
+
           <div className="w-16 h-16 bg-accent/10 text-accent border border-accent/20 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(87,227,137,0.15)] group-hover:scale-105 transition-transform duration-300">
             <Terminal className="w-7 h-7" />
           </div>
@@ -141,15 +141,14 @@ export default function LogsTab() {
 
           <div className="p-4 font-mono text-[11px] overflow-x-auto max-h-[500px] overflow-y-auto space-y-1.5">
             {logs.map((log, idx) => (
-              <div 
-                key={idx} 
+              <div
+                key={idx}
                 className="flex items-start gap-4 py-1.5 px-3 rounded-lg hover:bg-white/[0.02] border border-transparent hover:border-white/5 transition-all duration-100"
               >
                 <span className="text-secondaryText select-none shrink-0 font-light">{log.timestamp}</span>
                 <span className="text-white font-semibold shrink-0 uppercase tracking-wider bg-white/5 px-2 py-0.2 rounded border border-white/5">{log.server}</span>
-                <span className={`shrink-0 font-bold tracking-wider ${
-                  log.level === 'ERROR' ? 'text-danger' : log.level === 'WARNING' ? 'text-warning' : 'text-accent'
-                }`}>
+                <span className={`shrink-0 font-bold tracking-wider ${log.level === 'ERROR' ? 'text-danger' : log.level === 'WARNING' ? 'text-warning' : 'text-accent'
+                  }`}>
                   [{log.level}]
                 </span>
                 <span className="text-white/90 leading-relaxed">{log.message}</span>

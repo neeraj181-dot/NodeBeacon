@@ -37,7 +37,7 @@ export default function ForgotPassword({ onNavigate }) {
       {/* Background with CSS SVG Waves, Cyber Grid, and Floating Particles */}
       <WaveBackground />
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 15, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
@@ -73,7 +73,7 @@ export default function ForgotPassword({ onNavigate }) {
               <p className="text-[11px] text-secondaryText mt-1 leading-relaxed">Check your inbox at <strong>{email}</strong> for instructions to reset your password.</p>
             </div>
             {/* React Router - Declarative Link returning to Login */}
-            <Link 
+            <Link
               to="/login"
               onClick={() => onNavigate?.('login')}
               className="w-full h-11 bg-white/5 border border-white/5 hover:border-white/10 hover:bg-white/10 rounded-xl text-xs font-bold uppercase font-mono tracking-wider text-white transition-all cursor-pointer flex items-center justify-center gap-1.5"
@@ -88,8 +88,8 @@ export default function ForgotPassword({ onNavigate }) {
               <label className="text-[10px] font-bold text-secondaryText uppercase tracking-wider block font-mono">Account Email</label>
               <div className="relative">
                 <Mail className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors duration-200 ${emailFocused ? 'text-accent' : 'text-secondaryText'}`} />
-                <input 
-                  type="email" 
+                <input
+                  type="email"
                   required
                   value={email}
                   onFocus={() => setEmailFocused(true)}
@@ -101,8 +101,8 @@ export default function ForgotPassword({ onNavigate }) {
               </div>
             </div>
 
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="w-full h-11 bg-[#57E389] hover:bg-[#57E389]/95 text-black font-bold rounded-xl text-xs uppercase tracking-wider hover:shadow-[0_0_25px_rgba(87,227,137,0.35)] hover:-translate-y-0.5 transition-all mt-4 cursor-pointer flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(87,227,137,0.2)] font-sans"
             >
               <span>Recover Access</span>
@@ -111,7 +111,7 @@ export default function ForgotPassword({ onNavigate }) {
 
             <div className="text-center pt-2">
               {/* React Router - Declarative Link to login */}
-              <Link 
+              <Link
                 to="/login"
                 onClick={() => onNavigate?.('login')}
                 className="text-xs text-secondaryText hover:text-white transition-colors cursor-pointer font-sans"

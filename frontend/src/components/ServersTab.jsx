@@ -33,10 +33,10 @@ export default function ServersTab({ onViewServer }) {
     return () => clearInterval(interval);
   }, []);
 
-  
+
   // Search & Filters state
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Modal states
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -44,7 +44,7 @@ export default function ServersTab({ onViewServer }) {
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [agentDevice, setAgentDevice] = useState(null);
 
-  
+
   // Form states
   const [name, setName] = useState('');
   const [hostname, setHostname] = useState('');
@@ -58,7 +58,7 @@ export default function ServersTab({ onViewServer }) {
   const [formError, setFormError] = useState('');
 
   // Filtered servers
-  const filteredServers = servers.filter(server => 
+  const filteredServers = servers.filter(server =>
     server.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     server.hostname.toLowerCase().includes(searchQuery.toLowerCase()) ||
     server.ip_address.includes(searchQuery)
@@ -168,7 +168,7 @@ export default function ServersTab({ onViewServer }) {
     if (!dateString) return 'Never';
     const date = new Date(dateString);
     const seconds = Math.floor((new Date() - date) / 1000);
-    
+
     if (seconds < 10) return 'Just now';
     if (seconds < 60) return `${seconds}s ago`;
     const minutes = Math.floor(seconds / 60);

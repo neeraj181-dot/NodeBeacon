@@ -6,10 +6,10 @@ export default function WaveBackground() {
       {/* Shifting radial cyber glows */}
       <div className="absolute top-[-25%] left-[-20%] w-[70%] h-[70%] rounded-full bg-[#57E389]/4 blur-[130px] animate-pulse-slow pointer-events-none" />
       <div className="absolute bottom-[-20%] right-[-20%] w-[70%] h-[70%] rounded-full bg-[#00D084]/4 blur-[130px] animate-pulse-slow-delayed pointer-events-none" />
-      
+
       {/* Cyber Grid Overlay */}
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.012)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.012)_1px,transparent_1px)] bg-[size:32px_32px] opacity-70 pointer-events-none" />
-      
+
       {/* Horizontal glowing lines grid lines */}
       <div className="absolute w-full h-[1px] bg-gradient-to-r from-transparent via-[#57E389]/10 to-transparent top-[35%]" />
       <div className="absolute w-full h-[1px] bg-gradient-to-r from-transparent via-[#00D084]/8 to-transparent top-[65%]" />

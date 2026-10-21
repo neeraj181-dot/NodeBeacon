@@ -34,7 +34,7 @@ export default function ReportsTab() {
     setErrorMsg('');
     try {
       const response = await exportPDF();
-      
+
       // Determine file name from content-disposition header if available
       let filename = 'NodeBeacon_Report.pdf';
       const disposition = response.headers?.['content-disposition'];
@@ -75,9 +75,9 @@ export default function ReportsTab() {
             Weekly infrastructure health, uptime audits, and memory load summaries.
           </p>
         </div>
-        
+
         {reportGenerated && (
-          <button 
+          <button
             onClick={() => setReportGenerated(false)}
             className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 text-xs font-mono tracking-wider uppercase text-secondaryText hover:text-white transition-all cursor-pointer"
           >
@@ -133,7 +133,7 @@ export default function ReportsTab() {
               <CheckCircle2 className="w-4 h-4 text-accent" />
               <span className="text-xs font-semibold font-mono uppercase tracking-wider text-white">Report generated for July 12 - July 19</span>
             </div>
-            <button 
+            <button
               onClick={handleExportPDF}
               disabled={downloading}
               className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-accent text-[#070707] font-bold text-[10px] uppercase font-mono tracking-wider hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-[0_0_15px_rgba(87,227,137,0.15)] disabled:opacity-50"
@@ -189,19 +189,19 @@ export default function ReportsTab() {
                   <AreaChart data={mockCpuData}>
                     <defs>
                       <linearGradient id="reportCpu" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#57E389" stopOpacity={0.1}/>
-                        <stop offset="95%" stopColor="#57E389" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="var(--color-accent)" stopOpacity={0.15} />
+                        <stop offset="95%" stopColor="var(--color-accent)" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
                     <XAxis dataKey="day" stroke="var(--chart-label)" fontSize={10} axisLine={false} tickLine={false} />
                     <YAxis stroke="var(--chart-label)" fontSize={10} axisLine={false} tickLine={false} />
-                    <Tooltip 
+                    <Tooltip
                       contentStyle={{ backgroundColor: 'var(--chart-tooltip)', color: 'var(--color-foreground)', border: '1px solid var(--chart-grid)', borderRadius: '12px' }}
                       labelStyle={{ color: 'var(--chart-label)', fontFamily: 'monospace', fontSize: '10px' }}
                       itemStyle={{ fontSize: '11px', color: 'var(--color-foreground)' }}
                     />
-                    <Area type="monotone" dataKey="CPU" stroke="#57E389" strokeWidth={1.5} fillOpacity={1} fill="url(#reportCpu)" />
+                    <Area type="monotone" dataKey="CPU" stroke="var(--color-accent)" strokeWidth={1.5} fillOpacity={1} fill="url(#reportCpu)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>

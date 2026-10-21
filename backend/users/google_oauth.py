@@ -47,7 +47,7 @@ def get_default_redirect_uri(request=None):
                 return f"{parsed.scheme}://{parsed.hostname}{port_str}/auth/callback"
 
     # Fallback to configured FRONTEND_URL
-    frontend_base = getattr(settings, 'FRONTEND_URL', 'http://127.0.0.1:5173').rstrip('/')
+    frontend_base = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173').rstrip('/')
     return f"{frontend_base}/auth/callback"
 
 

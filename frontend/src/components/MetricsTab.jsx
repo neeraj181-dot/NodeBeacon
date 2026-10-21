@@ -13,10 +13,10 @@ export default function MetricsTab({ onSelectServer }) {
     if (!silent) setLoading(true);
     try {
       const data = await getMetrics();
-      
+
       // Group metrics by server ID and get the latest one for each
       const latestByServer = {};
-      
+
       // Since metrics is sorted descending (newest first), the first metric we encounter 
       // for a server is the latest one!
       data.forEach(metric => {
@@ -24,7 +24,7 @@ export default function MetricsTab({ onSelectServer }) {
           latestByServer[metric.server] = metric;
         }
       });
-      
+
       setLatestMetrics(latestByServer);
     } catch (err) {
       console.error("Failed to load metrics", err);
@@ -60,7 +60,7 @@ export default function MetricsTab({ onSelectServer }) {
 
   return (
     <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-background text-white select-none">
-      
+
       {/* Title */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-white font-mono uppercase">

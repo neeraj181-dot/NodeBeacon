@@ -54,8 +54,8 @@ export default function Navbar({ onAddServerClick, onNotificationsClick, isNotif
               Node<span className="text-accent">Beacon</span>
             </span>
             <span className="text-[9px] font-mono text-secondaryText uppercase tracking-wider block mt-1">
-              {user?.organization_details?.organization_name 
-                ? `${user.organization_details.organization_name} Workspace` 
+              {user?.organization_details?.organization_name
+                ? `${user.organization_details.organization_name} Workspace`
                 : 'Personal Workspace'}
             </span>
           </div>
@@ -107,7 +107,7 @@ export default function Navbar({ onAddServerClick, onNotificationsClick, isNotif
         )}
 
         {/* Quick Register Server */}
-        <button 
+        <button
           onClick={onAddServerClick}
           className="h-10 px-4 rounded-xl bg-accent text-[#070707] font-bold text-xs tracking-wider uppercase font-mono hover:scale-[1.02] active:scale-[0.98] flex items-center gap-1.5 transition-all duration-150 cursor-pointer shadow-[0_0_20px_rgba(87,227,137,0.15)]"
         >
@@ -130,7 +130,7 @@ export default function Navbar({ onAddServerClick, onNotificationsClick, isNotif
             <Bell className="w-4.5 h-4.5" />
           </button>
           {unreadAlertsCount > 0 && (
-            <span aria-hidden="true" className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-danger text-white text-[9px] font-bold flex items-center justify-center border border-[#050505] animate-neon-pulse font-mono">
+            <span aria-hidden="true" className="notification-badge absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-danger text-white text-[9px] font-bold flex items-center justify-center border border-[#050505] animate-neon-pulse font-mono">
               {unreadAlertsCount}
             </span>
           )}
